@@ -1,16 +1,15 @@
-import app from './app.js'
-import connectDB from './src/database/db.js'
-import dotenv from "dotenv"
-dotenv.config({
-    path:"./.env"
-})
-connectDB()
-.then(()=>{
-    app.listen(process.env.PORT || 8000, ()=>{
-        console.log(`App is listining on the ${process.env.PORT}`)
-    })
-})
-.catch((error)=>{
-    console.log("Error - ",error)
-})
+import { fileURLToPath } from 'url';
+import path from 'path';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Import and run your server
+import('./app.js');
+
+
 
