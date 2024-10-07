@@ -1,11 +1,14 @@
-import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
         trim: true,
+    },
+    dob: {
+        type: Date,
     },
     email: {
         type: String,
@@ -23,9 +26,17 @@ const userSchema = new mongoose.Schema({
         type: String,
         minlength: 6,
     },
-    token : {
-        type : String,
-        default : ''
+    profile: {
+        type: String,
+        default: "",
+    },
+    otp: {
+        type: String,
+        require: true
+    },
+    otpExpiration: {
+        type: Date,
+        default: () => new Date(Date.now() + 2 * 60 * 1000),  
     }
 }, { timestamps: true });
 

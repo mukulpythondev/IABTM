@@ -1,18 +1,24 @@
+import dotenv from "dotenv"
+dotenv.config({
+    path: "./.env"
+})
+
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
 import User from '../models/userModel.js';
 import Otp from '../models/otpModel.js';
 import bcrypt from 'bcryptjs'
-// import randomstring from 'randomstring';
+import randomstring from 'randomstring';
 import otpGenerator from 'otp-generator';
 import twilio from 'twilio';
 import otpVerification from '../helpers/otpValidate.js';
-// import sendResetEmail from '../helpers/sendEmail.js'
+import sendResetEmail from '../helpers/sendEmail.js'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const JWT_SECRET = process.env.JWT_SECRET;
-const twilioClient = new twilio(accountSid, authToken) 
+
+const twilioClient = new twilio(accountSid, authToken)
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
@@ -184,4 +190,55 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
     res.clearCookie("token");
     res.json({ message: "logged-out" });
+};
+
+export const forgetPassword = async (req, res) => {
+    try {
+        const email = req.body.email;
+        const userData = await User.findOne({ email: email });
+
+        if (userData) {
+            const randomString = randomstring.generate();
+            await User.updateOne({ email: email }, { $set: { token: randomString } });
+            await sendResetEmail(userData.name, userData.email, randomString);
+
+            return res.status(200).send({ message: "Please check your email to reset your password" });
+        }
+
+        return res.status(404).json({ message: "This email does not exist" });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+};
+
+export const verifyEmailOtp = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        const userData = await User.findOne({ email, otp });
+
+        if (!userData) {
+            return res.status(404).json({ message: "Invalid OTP or email" });
+        }
+
+        const currentTime = new Date();
+        if (currentTime > userData.otpExpiration) {
+            return res.status(400).json({ message: "OTP has expired" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        userData.password = hashedPassword;
+        userData.otp = ''; 
+        userData.otpExpiration = null; 
+
+        await userData.save();
+
+        res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Internal server error", error: error.message });
+    }
 };
