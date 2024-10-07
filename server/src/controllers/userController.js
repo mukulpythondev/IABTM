@@ -216,10 +216,14 @@ export const verifyEmailOtp = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
 
-        const userData = await User.findOne({ email, otp });
+        const userData = await User.findOne({ email });
 
         if (!userData) {
-            return res.status(404).json({ message: "Invalid OTP or email" });
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (userData.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
         }
 
         const currentTime = new Date();
@@ -227,18 +231,16 @@ export const verifyEmailOtp = async (req, res) => {
             return res.status(400).json({ message: "OTP has expired" });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        userData.password = hashedPassword;
-        userData.otp = ''; 
-        userData.otpExpiration = null; 
-
+        userData.password = newPassword;
+        userData.otp = '';  
+        userData.otpExpiration = null;  
+        console.log("new password" , newPassword);
         await userData.save();
+        console.log('Password updated successfully for user:', userData.email);
 
         res.status(200).json({ message: "Password updated successfully" });
     } catch (error) {
-        console.log(error);
+        console.log('Error saving the new password:', error);
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };
