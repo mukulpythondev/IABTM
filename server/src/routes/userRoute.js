@@ -1,7 +1,9 @@
 import express from 'express';
 const router = express.Router();
 
-import { register , sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp} from '../controllers/userController.js';
+import { register , sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp , updateProfile} from '../controllers/userController.js';
+
+import { authenticate } from '../middlewares/authMiddleware.js';
 
 router.post("/register-with-email", register);
 
@@ -16,5 +18,8 @@ router.post("/login-with-email" , login);
 router.post("/forgot-password",forgetPassword)
 
 router.post("/verify-email-otp", verifyEmailOtp)
+
+router.post("/updateProfile" , authenticate , updateProfile)
+
 
 export default router;

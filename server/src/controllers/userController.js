@@ -169,7 +169,6 @@ export const login = async (req, res) => {
     }
 };
 
-
 export const logout = (req, res) => {
     res.clearCookie("token");
     return res.json(new ApiResponse(200, null, "Logged out successfully"));
@@ -227,3 +226,34 @@ export const verifyEmailOtp = async (req, res) => {
         throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
+
+export const updateProfile = async (req,res) => {
+  try {
+    const userId = req.user.id;
+    
+    const updates = {};
+    const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];
+    
+    allowedUpdates.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+    
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+      runValidators: true
+    });
+    
+    if (!updatedUser) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    return res.status(200).json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+  } 
+  catch (error) {
+    console.error('Error updating profile:', error);
+    throw new ApiError(500, "Internal server error", [error.message]);
+  }
+};
+

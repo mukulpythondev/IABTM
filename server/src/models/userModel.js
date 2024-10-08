@@ -10,6 +10,20 @@ const userSchema = new mongoose.Schema({
     dob: {
         type: Date,
     },
+    age: {
+        type: Number,
+        min: [1, 'Age must be greater than 0'],
+    },
+    gender: {
+        type: String,
+        enum: ['male', 'female', 'other'], 
+        required: true
+    },
+    phone: {
+        type: Number,
+        required: true,
+        maxlength: 10  
+    },
     email: {
         type: String,
         unique: true,
@@ -26,9 +40,23 @@ const userSchema = new mongoose.Schema({
         type: String,
         minlength: 6,
     },
-    profile: {
+    profileName: {
         type: String,
-        default: "",
+        required: true,
+        trim: true,
+    },
+    attributes: {
+        type: [{
+            currentSelf: {
+                type: [String], // Array of user behaviors for current self
+                default: ["Unrelaxed", "Absent minded", "Afraid", "Exhausted"]
+            },
+            imagineSelf: {
+                type: [String], // Array of user behaviors for imagined self
+                default: ["Intelligent", "Wealthy", "Patient", "Social"]
+            }
+        }],
+        default: [{}],  // Ensure default structure for both `currentSelf` and `imagineSelf`
     },
     otp: {
         type: String,
@@ -36,7 +64,7 @@ const userSchema = new mongoose.Schema({
     },
     otpExpiration: {
         type: Date,
-        default: () => new Date(Date.now() + 2 * 60 * 1000),  
+        default: () => new Date(Date.now() + 2 * 60 * 1000),
     }
 }, { timestamps: true });
 
