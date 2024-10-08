@@ -1,7 +1,7 @@
-import dotenv from "dotenv"
-dotenv.config({
-    path: "./.env"
-})
+// import dotenv from "dotenv"
+// dotenv.config({
+//     path: "./.env"
+// })
 
 import jwt from 'jsonwebtoken';
 import validator from 'validator';
@@ -13,6 +13,8 @@ import otpGenerator from 'otp-generator';
 import twilio from 'twilio';
 import otpVerification from '../helpers/otpValidate.js';
 import sendResetEmail from '../helpers/sendEmail.js'
+import ApiError from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -23,22 +25,23 @@ const twilioClient = new twilio(accountSid, authToken)
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
 
+    // Validate input fields
     if (!name || !email || !password) {
-        return res.status(400).json({ message: "All fields are required" });
+        throw new ApiError(400, "All fields are required");
     }
 
     if (!validator.isEmail(email)) {
-        return res.status(400).json({ message: "Invalid email address" });
+        throw new ApiError(400, "Invalid email address");
     }
 
     if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        throw new ApiError(400, "Password must be at least 6 characters long");
     }
 
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            throw new ApiError(400, "User already exists");
         }
 
         const newUser = new User({ name, email, password });
@@ -47,11 +50,11 @@ export const register = async (req, res) => {
         const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie("token", token, { httpOnly: true });
-        res.status(201).json({ message: "User registered successfully" });
+        return res.status(201).json(new ApiResponse(201,newUser,  "User registered successfully" ));
 
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: "Internal server error", error: err.message });
+        console.error(err);
+        throw new ApiError(500, "Internal server error", [err.message]);
     }
 };
 
@@ -59,29 +62,24 @@ export const sendOtp = async (req, res) => {
     const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
-        return res.status(400).json({ message: "Phone number is required" });
+        throw new ApiError(400, "Phone number is required");
     }
-
-    // if (!/^\d{10}$/.test(phoneNumber)) {
-    //   return res.status(400).json({ message: "Invalid phone number format" });
-    // }
 
     try {
         const existingUser = await User.findOne({ phoneNumber });
         if (existingUser) {
-            return res.status(400).json({ message: "User with this phone number already exists" });
+            throw new ApiError(400, "User with this phone number already exists");
         }
 
         const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
-
-        const cDate = new Date()
+        const cDate = new Date();
 
         await Otp.findOneAndUpdate(
             { phoneNumber },
             {
                 $set: {
                     otp,
-                    otpExpiration: new Date(cDate.getTime())
+                    otpExpiration: new Date(cDate.getTime() + 5 * 60 * 1000) // Set expiration (e.g., 5 minutes)
                 }
             },
             {
@@ -89,84 +87,69 @@ export const sendOtp = async (req, res) => {
                 new: true,
                 setDefaultsOnInsert: true
             }
-        )
-            .then((result) => {
-                console.log(result);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
+        );
 
-
-        twilioClient.messages.create({
+        await twilioClient.messages.create({
             body: `Your OTP is ${otp}`,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: phoneNumber
         });
 
-        return res.status(200).json({
-            success: true,
-            msg: 'otp sent successfully - ' + otp
-        })
+        return res.status(200).json(new ApiResponse(200, null, 'OTP sent successfully'));
 
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: "Internal server error", error: err.message });
+        console.error(err);
+        throw new ApiError(500, "Internal server error", [err.message]);
     }
 };
 
 export const verifyOtp = async (req, res) => {
     try {
         const { phoneNumber, otp } = req.body;
-        const otpData = await Otp.findOne({ phoneNumber, otp })
+        const otpData = await Otp.findOne({ phoneNumber, otp });
         if (!otpData) {
-            res.status(404).json({ message: "You entered wrong OTP" });
+            throw new ApiError(404, "You entered wrong OTP");
         }
 
         const isOtpExpired = await otpVerification(otpData.otpExpiration);
 
-        console.log(isOtpExpired);
-
         if (isOtpExpired) {
-            return res.status(200).json({
-                success: false,
-                msg: 'Your OTP has been expired.'
-            })
+            return res.status(400).json(new ApiResponse(400, null, 'Your OTP has expired.'));
         }
 
         const token = jwt.sign({ id: otpData._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie('token', token, {
-            httpOnly: true
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 12 * 60 * 60 * 1000
         });
 
-        return res.status(200).json({
-            success: true,
-            msg: 'OTP Verified successfully !!'
-        })
+        return res.status(200).json(new ApiResponse(200, null, 'OTP Verified successfully!'));
 
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error('Error verifying OTP:', error);
+        throw new ApiError(500, "Internal server error", [error.message]);
     }
-}
+};
 
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ message: "Email and password are required" });
+            throw new ApiError(400, "Email and password are required");
         }
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "User not found" });
+            throw new ApiError(400, "User not found");
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials" });
+            throw new ApiError(400, "Invalid credentials");
         }
 
         const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
@@ -178,18 +161,18 @@ export const login = async (req, res) => {
             maxAge: 12 * 60 * 60 * 1000
         });
 
-        console.log('Cookie set:', res.getHeader('Set-Cookie'));
+        return res.status(200).json(new ApiResponse(200, { name: user.name, email: user.email }, "Logged in successfully"));
 
-        res.status(200).json({ message: "Logged in successfully", user: { name: user.name, email: user.email } });
     } catch (error) {
         console.error("Login error:", error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
 
+
 export const logout = (req, res) => {
     res.clearCookie("token");
-    res.json({ message: "logged-out" });
+    return res.json(new ApiResponse(200, null, "Logged out successfully"));
 };
 
 export const forgetPassword = async (req, res) => {
@@ -202,13 +185,13 @@ export const forgetPassword = async (req, res) => {
             await User.updateOne({ email: email }, { $set: { token: randomString } });
             await sendResetEmail(userData.name, userData.email, randomString);
 
-            return res.status(200).send({ message: "Please check your email to reset your password" });
+            return res.status(200).json(new ApiResponse(200, null, "Please check your email to reset your password"));
         }
 
-        return res.status(404).json({ message: "This email does not exist" });
+        throw new ApiError(404, "This email does not exist");
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error(error);
+        throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
 
@@ -219,28 +202,28 @@ export const verifyEmailOtp = async (req, res) => {
         const userData = await User.findOne({ email });
 
         if (!userData) {
-            return res.status(404).json({ message: "User not found" });
+            throw new ApiError(404, "User not found");
         }
 
         if (userData.otp !== otp) {
-            return res.status(400).json({ message: "Invalid OTP" });
+            throw new ApiError(400, "Invalid OTP");
         }
 
         const currentTime = new Date();
         if (currentTime > userData.otpExpiration) {
-            return res.status(400).json({ message: "OTP has expired" });
+            throw new ApiError(400, "OTP has expired");
         }
 
         userData.password = newPassword;
         userData.otp = '';  
         userData.otpExpiration = null;  
-        console.log("new password" , newPassword);
+        console.log("New password:", newPassword);
         await userData.save();
         console.log('Password updated successfully for user:', userData.email);
 
-        res.status(200).json({ message: "Password updated successfully" });
+        return res.status(200).json(new ApiResponse(200, null, "Password updated successfully"));
     } catch (error) {
-        console.log('Error saving the new password:', error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error('Error saving the new password:', error);
+        throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
