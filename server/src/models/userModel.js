@@ -1,75 +1,53 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const userSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,  
-  },
-  profileName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  gender: {
-    type: String,
-    enum: ['male', 'female', 'other'], // Gender selection
-    required: true
-  },
-  dob: {
-    type: Date,
-  },
-  phone: {
-    type: Number,
-    required: true,
-    maxlength: 10  // Maximum length for US phone numbers
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true, 
-    lowercase: true,
-    trim: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
-  },
-  profile: {  // Profile picture URL
-    type: String,
-    default: "",  
-  },
-  attributes: {
-    type: [{
-      currentSelf: {
-        type: [String], // Array of user behaviors for current self
-        default: ["Unrelaxed", "Absent minded", "Afraid", "Exhausted"]
-      },
-      imagineSelf: {
-        type: [String], // Array of user behaviors for imagined self
-        default: ["Intelligent", "Wealthy", "Patient", "Social"]
-      }
-    }],
-    default: [{}],  // Ensure default structure for both `currentSelf` and `imagineSelf`
-  },
-  paymentMethods: {
-    type: [{
-      methodType: {
+const userSchema = new mongoose.Schema({
+    name: {
         type: String,
-        enum: ['Credit Card', 'Debit Card', 'PayPal', 'Bank Transfer'],
-      },
-      cardNumber: {
+        required: true,
+        trim: true,
+    },
+    dob: {
+        type: Date,
+    },
+    email: {
         type: String,
-      },
-      expiryDate: {
-        type: String,  
-      }
-    }],
-    default: []  // No payment methods by default
-  }
-}, {
-  timestamps: true, // Automatically adds createdAt and updatedAt timestamps
+        unique: true,
+        sparse: true,
+        lowercase: true,
+        validate: {
+            validator: function (v) {
+                return v === null || /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(v);
+            },
+            message: props => `${props.value} is not a valid email address!`,
+        }
+    },
+    password: {
+        type: String,
+        minlength: 6,
+    },
+    profile: {
+        type: String,
+        default: "",
+    },
+    otp: {
+        type: String,
+        require: true
+    },
+    otpExpiration: {
+        type: Date,
+        default: () => new Date(Date.now() + 2 * 60 * 1000),  
+    }
+}, { timestamps: true });
+
+// Middleware to hash the password before saving
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) return next();
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
 });
 
-export default mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema);
+
+export default User;
