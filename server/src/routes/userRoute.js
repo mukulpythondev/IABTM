@@ -4,8 +4,9 @@ const router = express.Router();
 import { register , sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp , updateProfile} from '../controllers/userController.js';
 
 import { authenticate } from '../middlewares/authMiddleware.js';
+import {upload} from '../middlewares/multerMiddleware.js'
 
-router.post("/register-with-email", register);
+router.post("/register-with-email", upload , register);
 
 router.post("/send-sms-otp", sendOtp);
 

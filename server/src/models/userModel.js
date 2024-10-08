@@ -64,7 +64,7 @@ const userSchema = new mongoose.Schema({
     },
     otpExpiration: {
         type: Date,
-        default: () => new Date(Date.now() + 2 * 60 * 1000),
+        default: () => new Date(Date.now() + 5 * 60 * 1000),
     }
 }, { timestamps: true });
 
