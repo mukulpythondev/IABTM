@@ -15,9 +15,9 @@ import otpVerification from '../helpers/otpValidate.js';
 import sendResetEmail from '../helpers/sendEmail.js'
 import ApiError from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import cloudinary from "cloudinary";
 import fs from "fs";
 import { promisify } from "util";
+import uploadOnCloudinary from '../utils/cloudinary.js';
 
 const unlinkAsync = promisify(fs.unlink);
 const accountSid = process.env.TWILIO_ACCOUNT_SID
@@ -48,11 +48,7 @@ export const register = async (req, res) => {
             throw new ApiError(400, "User already exists");
         }
 
-        const result = await cloudinary.v2.uploader.upload(file.path, {
-            folder: "users",
-            use_filename: true,
-            unique_filename: false
-        });
+        const result = uploadOnCloudinary(file.path)
 
         // Delete the local file after uploading to Cloudinary
         await unlinkAsync(file.path);
