@@ -6,7 +6,7 @@ import { register , sendOtp , verifyOtp , login , logout , forgetPassword , veri
 import { authenticate } from '../middlewares/authMiddleware.js';
 import {upload} from '../middlewares/multerMiddleware.js'
 
-router.post("/register-with-email", upload , register);
+router.post("/register-with-email", upload.single("profile") , register);
 
 router.post("/send-sms-otp", sendOtp);
 
