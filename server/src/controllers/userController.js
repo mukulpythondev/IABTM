@@ -15,11 +15,7 @@ import otpVerification from '../helpers/otpValidate.js';
 import sendResetEmail from '../helpers/sendEmail.js'
 import ApiError from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import fs from "fs";
-import { promisify } from "util";
 import uploadOnCloudinary from '../utils/cloudinary.js';
-
-const unlinkAsync = promisify(fs.unlink);
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -28,9 +24,10 @@ const twilioClient = new twilio(accountSid, authToken)
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
-    const { file } = req;
+    const filepath= req?.file?.path
+    console.log(filepath)
 
-    if (!name || !email || !password || !file) {
+    if (!name || !email || !password || !filepath) {
         throw new ApiError(400, "All fields and a profile picture are required");
     }
 
@@ -48,11 +45,7 @@ export const register = async (req, res) => {
             throw new ApiError(400, "User already exists");
         }
 
-        const result = uploadOnCloudinary(file.path)
-
-        // Delete the local file after uploading to Cloudinary
-        await unlinkAsync(file.path);
-
+        const result = await uploadOnCloudinary(filepath)
         const newUser = new User({
             name,
             email,
@@ -60,7 +53,7 @@ export const register = async (req, res) => {
             profilePicture: result.public_id
         });
 
-        await newUser.save();
+        await newUser.save({validationBeforeSave:false});
 
         const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
