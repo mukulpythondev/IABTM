@@ -17,11 +17,11 @@ const userSchema = new mongoose.Schema({
     gender: {
         type: String,
         enum: ['male', 'female', 'other'], 
-        required: true
+        // required: true
     },
     phone: {
         type: Number,
-        required: true,
+        // required: true,
         maxlength: 10  
     },
     email: {
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     },
     profileName: {
         type: String,
-        required: true,
+        // required: true,
         trim: true,
     },
     attributes: {

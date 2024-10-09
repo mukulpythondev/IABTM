@@ -5,10 +5,11 @@ const masterclassSchema = new mongoose.Schema({
         type : String,
         required : true
     },
-    tags : {
-        type : Array,
-        required : true
-    },
+    tags : [
+        {
+            type: String
+        }
+    ],
     content : {
         type : String,
         required : true

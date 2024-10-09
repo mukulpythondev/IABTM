@@ -5,7 +5,7 @@ import ApiError from "./ApiError.js";
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME ,
     api_key: process.env.CLOUDINARY_API_KEY ,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_KEY_SECRET
 })
 const uploadOnCloudinary= async (filepath)=>{
          try {
@@ -18,6 +18,7 @@ const uploadOnCloudinary= async (filepath)=>{
             return response;
 
          } catch (error) {
+            // console.error("Error uploading to Cloudinary:", error); 
             fs.promises.unlink(filepath) // remove the locally saved file as it upload operation got failed
             return null;
          }

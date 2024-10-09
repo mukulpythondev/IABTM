@@ -17,11 +17,11 @@ const expertSchema = new mongoose.Schema({
     gender: {
         type: String,
         enum: ['male', 'female', 'other'],
-        required: true
+        // required: true
     },
     phone: {
         type: Number,
-        required: true,
+        // required: true,
         maxlength: 10
     },
     email: {
@@ -73,6 +73,6 @@ expertSchema.pre('save', async function (next) {
     next();
 });
 
-const expert = mongoose.model('expert', expertSchema);
+const Expert = mongoose.model('Expert', expertSchema);
 
-export default expert;
+export default Expert;
