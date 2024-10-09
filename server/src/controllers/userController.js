@@ -15,7 +15,11 @@ import otpVerification from '../helpers/otpValidate.js';
 import sendResetEmail from '../helpers/sendEmail.js'
 import ApiError from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import fs from "fs";
+import { promisify } from "util";
+import uploadOnCloudinary from '../utils/cloudinary.js';
 
+const unlinkAsync = promisify(fs.unlink);
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,10 +28,10 @@ const twilioClient = new twilio(accountSid, authToken)
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
+    const { file } = req;
 
-    // Validate input fields
-    if (!name || !email || !password) {
-        throw new ApiError(400, "All fields are required");
+    if (!name || !email || !password || !file) {
+        throw new ApiError(400, "All fields and a profile picture are required");
     }
 
     if (!validator.isEmail(email)) {
@@ -44,13 +48,24 @@ export const register = async (req, res) => {
             throw new ApiError(400, "User already exists");
         }
 
-        const newUser = new User({ name, email, password });
+        const result = uploadOnCloudinary(file.path)
+
+        // Delete the local file after uploading to Cloudinary
+        await unlinkAsync(file.path);
+
+        const newUser = new User({
+            name,
+            email,
+            password,
+            profilePicture: result.public_id
+        });
+
         await newUser.save();
 
         const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie("token", token, { httpOnly: true });
-        return res.status(201).json(new ApiResponse(201,newUser,  "User registered successfully" ));
+        return res.status(201).json(new ApiResponse(201, newUser, "User registered successfully"));
 
     } catch (err) {
         console.error(err);
@@ -169,7 +184,6 @@ export const login = async (req, res) => {
     }
 };
 
-
 export const logout = (req, res) => {
     res.clearCookie("token");
     return res.json(new ApiResponse(200, null, "Logged out successfully"));
@@ -215,8 +229,8 @@ export const verifyEmailOtp = async (req, res) => {
         }
 
         userData.password = newPassword;
-        userData.otp = '';  
-        userData.otpExpiration = null;  
+        userData.otp = '';
+        userData.otpExpiration = null;
         console.log("New password:", newPassword);
         await userData.save();
         console.log('Password updated successfully for user:', userData.email);
@@ -227,3 +241,34 @@ export const verifyEmailOtp = async (req, res) => {
         throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
+
+export const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const updates = {};
+        const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];
+
+        allowedUpdates.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+            new: true,
+            runValidators: true
+        });
+
+        if (!updatedUser) {
+            throw new ApiError(404, "User not found");
+        }
+
+        return res.status(200).json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+    }
+    catch (error) {
+        console.error('Error updating profile:', error);
+        throw new ApiError(500, "Internal server error", [error.message]);
+    }
+};
+

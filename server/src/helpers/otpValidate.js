@@ -9,10 +9,9 @@ const otpVerification = async (otpTime) => {
         
         console.log("Expires in minutes = ", expiryMin);
 
-        if (expiryMin > 2) {
+        if (expiryMin > 5) {
             return true;
         }
-
         return false;
 
     } catch (error) {
