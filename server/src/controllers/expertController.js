@@ -1,26 +1,57 @@
-// import dotenv from "dotenv"
-// dotenv.config({
-//     path: "./.env"
-// })
 
-import jwt from 'jsonwebtoken';
-import validator from 'validator';
-import User from '../models/userModel.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import Expert from '../models/expertModel.js';
 import Otp from '../models/otpModel.js';
-import bcrypt from 'bcryptjs'
-import randomstring from 'randomstring';
-import otpGenerator from 'otp-generator';
-import twilio from 'twilio';
-import otpVerification from '../helpers/otpValidate.js';
-import sendResetEmail from '../helpers/sendEmail.js'
-import ApiError from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import masterclass from '../models/masterClass.js';
+import ApiError from '../utils/ApiError.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
-const accountSid = process.env.TWILIO_ACCOUNT_SID
-const authToken = process.env.TWILIO_AUTH_TOKEN
-const JWT_SECRET = process.env.JWT_SECRET;
 
-const twilioClient = new twilio(accountSid, authToken)
+export const postMasterclass = async (req, res) => {
+    try {
+        const { title, tags } = req.body;
+        const expertId = req.user.id; 
+
+        if (!title || !content) {
+            throw new ApiError(400, 'Title and content are required.');
+        }
+
+        if (!req.file) {
+            throw new ApiError(400, 'No video file uploaded.');
+        }
+
+        const filePath = req.file.path;
+        const result = await uploadOnCloudinary(filePath);
+
+        if (!result) {
+            throw new ApiError(500, 'Failed to upload video to Cloudinary.');
+        }
+
+        const newMasterclass = new masterclass({
+            title,
+            tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
+            content: result.url
+        });
+
+        const savedMasterclass = await newMasterclass.save();
+
+        await Expert.findByIdAndUpdate(
+            expertId,
+            { $push: { masterClasses: savedMasterclass._id } },
+            { new: true, runValidators: true }
+        );
+
+        res.status(201).json(
+            new ApiResponse(201, 'Masterclass created successfully', {
+                masterclass: savedMasterclass
+            })
+        );
+    } catch (error) {
+        console.error('Error in postMasterclass:', error);
+        res.status(error.statusCode || 500).json(
+            new ApiError(error.statusCode || 500, error.message)
+        );
+    }
+};
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
@@ -40,26 +71,25 @@ export const register = async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            throw new ApiError(400, "User already exists");
+        const existingExpert = await Expert.findOne({ email });
+        if (existingExpert) {
+            throw new ApiError(400, "Expert already exists");
         }
 
         const result = await uploadOnCloudinary(filepath)
-
-        const newUser = new User({
+        const newExpert = new Expert({
             name,
             email,
             password,
-            profilePicture: result.secure_url
+            profilePicture: result.public_id
         });
 
-        await newUser.save({validationBeforeSave:false});
+        await newExpert.save({validationBeforeSave:false});
 
-        const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
+        const token = jwt.sign({ id: newExpert._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie("token", token, { httpOnly: true });
-        return res.status(201).json(new ApiResponse(201, newUser, "User registered successfully"));
+        return res.status(201).json(new ApiResponse(201, newExpert, "Expert registered successfully"));
 
     } catch (err) {
         console.error(err);
@@ -75,9 +105,9 @@ export const sendOtp = async (req, res) => {
     }
 
     try {
-        const existingUser = await User.findOne({ phoneNumber });
-        if (existingUser) {
-            throw new ApiError(400, "User with this phone number already exists");
+        const existingExpert = await Expert.findOne({ phoneNumber });
+        if (existingExpert) {
+            throw new ApiError(400, "Expert with this phone number already exists");
         }
 
         const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
@@ -151,17 +181,17 @@ export const login = async (req, res) => {
             throw new ApiError(400, "Email and password are required");
         }
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            throw new ApiError(400, "User not found");
+        const Expert = await Expert.findOne({ email });
+        if (!Expert) {
+            throw new ApiError(400, "Expert not found");
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(password, Expert.password);
         if (!isMatch) {
             throw new ApiError(400, "Invalid credentials");
         }
 
-        const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
+        const token = jwt.sign({ id: Expert._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie('token', token, {
             httpOnly: true,
@@ -170,7 +200,7 @@ export const login = async (req, res) => {
             maxAge: 12 * 60 * 60 * 1000
         });
 
-        return res.status(200).json(new ApiResponse(200, { name: user.name, email: user.email }, "Logged in successfully"));
+        return res.status(200).json(new ApiResponse(200, { name: Expert.name, email: Expert.email }, "Logged in successfully"));
 
     } catch (error) {
         console.error("Login error:", error);
@@ -186,12 +216,12 @@ export const logout = (req, res) => {
 export const forgetPassword = async (req, res) => {
     try {
         const email = req.body.email;
-        const userData = await User.findOne({ email: email });
+        const ExpertData = await Expert.findOne({ email: email });
 
-        if (userData) {
+        if (ExpertData) {
             const randomString = randomstring.generate();
-            await User.updateOne({ email: email }, { $set: { token: randomString } });
-            await sendResetEmail(userData.name, userData.email, randomString);
+            await Expert.updateOne({ email: email }, { $set: { token: randomString } });
+            await sendResetEmail(ExpertData.name, ExpertData.email, randomString);
 
             return res.status(200).json(new ApiResponse(200, null, "Please check your email to reset your password"));
         }
@@ -207,27 +237,27 @@ export const verifyEmailOtp = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
 
-        const userData = await User.findOne({ email });
+        const ExpertData = await Expert.findOne({ email });
 
-        if (!userData) {
-            throw new ApiError(404, "User not found");
+        if (!ExpertData) {
+            throw new ApiError(404, "Expert not found");
         }
 
-        if (userData.otp !== otp) {
+        if (ExpertData.otp !== otp) {
             throw new ApiError(400, "Invalid OTP");
         }
 
         const currentTime = new Date();
-        if (currentTime > userData.otpExpiration) {
+        if (currentTime > ExpertData.otpExpiration) {
             throw new ApiError(400, "OTP has expired");
         }
 
-        userData.password = newPassword;
-        userData.otp = '';
-        userData.otpExpiration = null;
+        ExpertData.password = newPassword;
+        ExpertData.otp = '';
+        ExpertData.otpExpiration = null;
         console.log("New password:", newPassword);
-        await userData.save();
-        console.log('Password updated successfully for user:', userData.email);
+        await ExpertData.save();
+        console.log('Password updated successfully for Expert:', ExpertData.email);
 
         return res.status(200).json(new ApiResponse(200, null, "Password updated successfully"));
     } catch (error) {
@@ -238,7 +268,7 @@ export const verifyEmailOtp = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const ExpertId = req.user.id;
 
         const updates = {};
         const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];
@@ -249,16 +279,28 @@ export const updateProfile = async (req, res) => {
             }
         });
 
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, {
+        if (req.body.expertTag !== undefined) {
+            if (req.body.expertTag === null || (Array.isArray(req.body.expertTag) && req.body.expertTag.length === 0)) {
+                updates.expertTag = [];
+            } 
+            else if (Array.isArray(req.body.expertTag)) {
+                updates.expertTag = req.body.expertTag;
+            }
+            else if (typeof req.body.expertTag === 'string') {
+                updates.expertTag = [req.body.expertTag];
+            }
+        }
+
+        const updatedExpert = await Expert.findByIdAndUpdate(ExpertId, updates, {
             new: true,
             runValidators: true
         });
 
-        if (!updatedUser) {
-            throw new ApiError(404, "User not found");
+        if (!updatedExpert) {
+            throw new ApiError(404, "Expert not found");
         }
 
-        return res.status(200).json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+        return res.status(200).json(new ApiResponse(200, updatedExpert, "Profile updated successfully"));
     }
     catch (error) {
         console.error('Error updating profile:', error);
