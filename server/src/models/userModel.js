@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    profilePicture: {
+        type: String,
+        required: true,
+    },
     dob: {
         type: Date,
     },

@@ -1,9 +1,10 @@
-import { ApiError } from '../utils/ApiError.js';
+
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import Expert from '../models/expertModel.js';
 import Otp from '../models/otpModel.js';
 import masterclass from '../models/masterClass.js';
+import ApiError from '../utils/ApiError.js';
+import uploadOnCloudinary from '../utils/cloudinary.js';
 
 export const postMasterclass = async (req, res) => {
     try {

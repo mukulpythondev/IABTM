@@ -46,11 +46,12 @@ export const register = async (req, res) => {
         }
 
         const result = await uploadOnCloudinary(filepath)
+
         const newUser = new User({
             name,
             email,
             password,
-            profilePicture: result.public_id
+            profilePicture: result.secure_url
         });
 
         await newUser.save({validationBeforeSave:false});
