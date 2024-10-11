@@ -2,13 +2,10 @@ import express from 'express';
 const router = express.Router();
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/multerMiddleware.js';
-import { postMasterclass } from '../controllers/expertController.js';
 
-router.post('/masterclass', authenticate, upload.single('video'), postMasterclass);
+import { register , sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp , updateProfile , postMasterclass} from '../controllers/expertController.js';
 
-import { register , sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp , updateProfile} from '../controllers/expertController.js';
-
-router.post("/register-with-email", upload.single('file') , register);
+router.post("/register-with-email", upload.single('file'), register);
 
 router.post("/send-sms-otp", sendOtp);
 
@@ -23,5 +20,7 @@ router.post("/forgot-password",forgetPassword)
 router.post("/verify-email-otp", verifyEmailOtp)
 
 router.post("/updateProfile" , authenticate , updateProfile);
+
+router.post("/post-masterclass" , upload.single('video') , postMasterclass)
 
 export default router;

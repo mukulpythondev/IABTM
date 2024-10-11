@@ -10,7 +10,7 @@ const masterclassSchema = new mongoose.Schema({
             type: String
         }
     ],
-    content : {
+    video : {
         type : String,
         required : true
     }

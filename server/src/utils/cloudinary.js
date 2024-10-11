@@ -18,7 +18,7 @@ const uploadOnCloudinary= async (filepath)=>{
             return response;
 
          } catch (error) {
-            // console.error("Error uploading to Cloudinary:", error); 
+            console.error("Error uploading to Cloudinary:", error); 
             fs.promises.unlink(filepath) // remove the locally saved file as it upload operation got failed
             return null;
          }
