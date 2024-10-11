@@ -1,19 +1,23 @@
 import Order from '../models/orderModel.js';
 import Cart from '../models/cartModel.js';
-import {ApiResponse} from '../utils/ApiResponse.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
 
 export const createOrder = async (req, res) => {
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     try {
-        const cart = await Cart.findOne({ user: userId });
+        const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
         if (!cart || cart.items.length === 0) {
             throw new ApiError(400, "Cart is empty");
         }
 
-        const totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0); // Assume you have a price field in the product
+        const totalAmount = cart.items.reduce((total, item) => {
+            return total + (item.product.price * item.quantity);
+        }, 0);
+
+        console.log(totalAmount)
 
         const order = new Order({
             user: userId,
@@ -34,7 +38,7 @@ export const createOrder = async (req, res) => {
 };
 
 export const getOrderHistory = async (req, res) => {
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     try {
         const orders = await Order.find({ user: userId }).populate('items.product');

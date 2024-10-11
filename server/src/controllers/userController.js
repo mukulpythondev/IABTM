@@ -238,7 +238,7 @@ export const verifyEmailOtp = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const userId = req.user.id;
 
         const updates = {};
         const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];

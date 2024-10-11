@@ -5,7 +5,7 @@ import { authenticate } from '../middlewares/authMiddleware.js';
 
 import { createOrder , getOrderHistory } from '../controllers/orderController.js';
 
-router.post("/create" , authenticate , createOrder)
+router.get("/create" , authenticate , createOrder)
 
 router.get("/get-history" , authenticate , getOrderHistory)
 

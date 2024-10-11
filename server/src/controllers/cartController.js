@@ -4,7 +4,10 @@ import ApiError from '../utils/ApiError.js';
 
 export const addToCart = async (req, res) => {
     const { productId, quantity } = req.body;
-    const userId = req.user._id; 
+    const userId = req.user.id; 
+    if (!userId) {
+        throw new ApiError(400, "user id not found");
+    }
     if (!productId || !quantity) {
         throw new ApiError(400, "Product ID and quantity are required");
     }
@@ -36,7 +39,7 @@ export const addToCart = async (req, res) => {
 };
 
 export const getCart = async (req, res) => {
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     try {
         const cart = await Cart.findOne({ user: userId }).populate('items.product');
@@ -54,7 +57,7 @@ export const getCart = async (req, res) => {
 
 export const removeFromCart = async (req, res) => {
     const { productId } = req.body;
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     try {
         const cart = await Cart.findOne({ user: userId });
