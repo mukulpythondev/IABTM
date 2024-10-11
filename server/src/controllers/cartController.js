@@ -1,6 +1,5 @@
-// controllers/cartController.js
-import Cart from '../models/Cart.js';
-import ApiResponse from '../utils/ApiResponse.js';
+import Cart from '../models/cartModel.js';
+import {ApiResponse} from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
 
 export const addToCart = async (req, res) => {

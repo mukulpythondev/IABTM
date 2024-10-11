@@ -5,11 +5,20 @@ import ApiError from '../utils/ApiError.js';
 
 export const createProduct = async (req, res) => {
     try {
+        const fileNames = req.filenames; 
+        console.log("Uploaded Files:", fileNames);
+
+        const uploadedFiles = [];
+
+        for (const fileName of fileNames) {
+            console.log(fileName)
+            console.log(fileName.path)
+            const result = await uploadOnCloudinary(fileName.path);
+            console.log(result)
+            uploadedFiles.push(result.secure_url);
+        }
+
         const { title, shortDescription, description, price, inStock, product_id, category } = req.body;
-
-        const filepath = req?.file?.path;
-
-        const result = await uploadOnCloudinary(filepath);
 
         const product = new Product({
             title,
@@ -18,14 +27,15 @@ export const createProduct = async (req, res) => {
             price,
             inStock,
             product_id,
-            category,
-            picture: result.public_id
+            category
+            // picture: uploadedFiles
         });
 
         await product.save();
 
         return res.status(201).json(new ApiResponse(201, "Product created successfully", product));
     } catch (error) {
+        console.log(error)
         return res.status(500).json(new ApiError(500, "Error creating product", error));
     }
 };

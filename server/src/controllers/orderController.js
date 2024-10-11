@@ -1,7 +1,6 @@
-// controllers/orderController.js
-import Order from '../models/Order.js';
-import Cart from '../models/Cart.js';
-import ApiResponse from '../utils/ApiResponse.js';
+import Order from '../models/orderModel.js';
+import Cart from '../models/cartModel.js';
+import {ApiResponse} from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
 
 export const createOrder = async (req, res) => {

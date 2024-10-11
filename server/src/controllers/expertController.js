@@ -1,4 +1,3 @@
-
 import { ApiResponse } from '../utils/ApiResponse.js';
 import Expert from '../models/expertModel.js';
 import Otp from '../models/otpModel.js';
@@ -9,17 +8,18 @@ import uploadOnCloudinary from '../utils/cloudinary.js';
 export const postMasterclass = async (req, res) => {
     try {
         const { title, tags } = req.body;
-        const expertId = req.user.id; 
+        // const expertId = req.user._id; 
 
-        if (!title || !content) {
+        if (!title || !tags) {
             throw new ApiError(400, 'Title and content are required.');
         }
 
         if (!req.file) {
             throw new ApiError(400, 'No video file uploaded.');
         }
-
+        console.log(req.file)
         const filePath = req.file.path;
+        console.log(filePath)
         const result = await uploadOnCloudinary(filePath);
 
         if (!result) {
@@ -29,16 +29,16 @@ export const postMasterclass = async (req, res) => {
         const newMasterclass = new masterclass({
             title,
             tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
-            content: result.url
+            content: result.secure_url
         });
 
         const savedMasterclass = await newMasterclass.save();
 
-        await Expert.findByIdAndUpdate(
-            expertId,
-            { $push: { masterClasses: savedMasterclass._id } },
-            { new: true, runValidators: true }
-        );
+        // await Expert.findByIdAndUpdate(
+        //     expertId,
+        //     { $push: { masterClasses: savedMasterclass._id } },
+        //     { new: true, runValidators: true }
+        // );
 
         res.status(201).json(
             new ApiResponse(201, 'Masterclass created successfully', {
@@ -55,7 +55,7 @@ export const postMasterclass = async (req, res) => {
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
-    const filepath= req?.file?.path
+    const filepath = req?.file?.path
     console.log(filepath)
 
     if (!name || !email || !password || !filepath) {
@@ -77,14 +77,15 @@ export const register = async (req, res) => {
         }
 
         const result = await uploadOnCloudinary(filepath)
+
         const newExpert = new Expert({
             name,
             email,
             password,
-            profilePicture: result.public_id
+            profilePicture: result.secure_url
         });
 
-        await newExpert.save({validationBeforeSave:false});
+        await newExpert.save({ validationBeforeSave: false });
 
         const token = jwt.sign({ id: newExpert._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
@@ -268,7 +269,7 @@ export const verifyEmailOtp = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const ExpertId = req.user.id;
+        const ExpertId = req.user._id;
 
         const updates = {};
         const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];
@@ -282,7 +283,7 @@ export const updateProfile = async (req, res) => {
         if (req.body.expertTag !== undefined) {
             if (req.body.expertTag === null || (Array.isArray(req.body.expertTag) && req.body.expertTag.length === 0)) {
                 updates.expertTag = [];
-            } 
+            }
             else if (Array.isArray(req.body.expertTag)) {
                 updates.expertTag = req.body.expertTag;
             }
