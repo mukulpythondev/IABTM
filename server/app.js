@@ -18,7 +18,7 @@ app.use(cookieParser())
 app.use("/api/auth/user", authRoutes);
 app.use("/api/attribute", attributeRoutes);
 app.use("/api/expert", expertroutes)
-app.use("/shop",shopRoutes)
-app.use("/order",orderRoutes)
-app.use("/cart",cartRoutes)
+app.use("/api/shop",shopRoutes)
+app.use("/api/order",orderRoutes)
+app.use("/api/cart",cartRoutes)
 export default app;

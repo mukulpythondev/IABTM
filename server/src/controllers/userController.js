@@ -153,7 +153,7 @@ export const login = async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            throw new ApiError(400, "User not found");
+            res.status(400).json(new ApiResponse(400,{} , "User not found"));
         }
 
         const isMatch = await bcrypt.compare(password, user.password);

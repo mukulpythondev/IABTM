@@ -1,9 +1,10 @@
 import express from 'express';
 import { createProduct, getProducts, getProductById, updateProduct, deleteProduct } from '../controllers/productController.js';
-import { uploadMiddleware } from '../middlewares/multerMiddleware.js';
 const router = express.Router();
+import { upload } from '../middlewares/multerMiddleware.js';
+const uploadFields = upload.array('productImages', 4);
 
-router.post('/createProduct', uploadMiddleware, createProduct);
+router.post('/createProduct', uploadFields, createProduct);
 
 router.get('/allProducts', getProducts);
 
