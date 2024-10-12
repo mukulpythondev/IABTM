@@ -18,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 export const postMasterclass = async (req, res) => {
     try {
         const { title, tags } = req.body;
-        // const expertId = req.user._id; 
+        // const expertId = req.user.id; 
 
         if (!title || !tags) {
             throw new ApiError(400, 'Title and content are required.');
@@ -306,7 +306,7 @@ export const verifyEmailOtp = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const ExpertId = req.user._id;
+        const ExpertId = req.user.id;
 
         const updates = {};
         const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];

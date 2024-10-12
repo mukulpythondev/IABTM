@@ -21,6 +21,8 @@ router.post("/verify-email-otp", verifyEmailOtp)
 
 router.post("/updateProfile" , authenticate , updateProfile);
 
+
 router.post("/post-masterclass" , authenticate ,upload.single('video') , postMasterclass)
+
 
 export default router;
