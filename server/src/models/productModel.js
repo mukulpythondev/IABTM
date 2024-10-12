@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema({
-    picture : [{
-        type : String
-    }],
+    pictures : {
+        type : [String],
+        required:true
+    },
     title : {
         type : String,
         required : true

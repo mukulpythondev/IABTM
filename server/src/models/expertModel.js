@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 const expertSchema = new mongoose.Schema({
     user: {
@@ -18,13 +17,6 @@ const expertSchema = new mongoose.Schema({
     ]
 }, { timestamps: true });
 
-// Middleware to hash the password before saving
-expertSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-});
 
 const Expert = mongoose.model('Expert', expertSchema);
 

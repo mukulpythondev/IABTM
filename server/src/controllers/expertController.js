@@ -1,10 +1,20 @@
 import { ApiResponse } from '../utils/ApiResponse.js';
 import Expert from '../models/expertModel.js';
 import Otp from '../models/otpModel.js';
-import masterclass from '../models/masterClass.js';
+import masterclass from '../models/masterClassModel.js';
 import ApiError from '../utils/ApiError.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
-
+import User from '../models/userModel.js';
+import validator from 'validator';
+import jwt from "jsonwebtoken"
+import randomstring from 'randomstring';
+import bcrypt from 'bcryptjs'
+import otpGenerator from 'otp-generator';
+import twilio from 'twilio';
+import sendResetEmail from '../helpers/sendEmail.js';
+const accountSid = process.env.TWILIO_ACCOUNT_SID
+const authToken = process.env.TWILIO_AUTH_TOKEN
+const JWT_SECRET = process.env.JWT_SECRET;
 export const postMasterclass = async (req, res) => {
     try {
         const { title, tags } = req.body;
@@ -29,7 +39,7 @@ export const postMasterclass = async (req, res) => {
         const newMasterclass = new masterclass({
             title,
             tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
-            content: result.secure_url
+            video: result.secure_url
         });
 
         const savedMasterclass = await newMasterclass.save();
@@ -52,12 +62,11 @@ export const postMasterclass = async (req, res) => {
         );
     }
 };
-
-export const register = async (req, res) => {
+export const registerExpert = async (req, res) => {
     const { name, email, password } = req.body;
-    const filepath = req?.file?.path
-    console.log(filepath)
+    const filepath = req?.file?.path;
 
+    // Validate input fields
     if (!name || !email || !password || !filepath) {
         throw new ApiError(400, "All fields and a profile picture are required");
     }
@@ -71,25 +80,46 @@ export const register = async (req, res) => {
     }
 
     try {
-        const existingExpert = await Expert.findOne({ email });
-        if (existingExpert) {
-            throw new ApiError(400, "Expert already exists");
+        // Check if the user already exists in the User model
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            res.status(400).json(new ApiResponse(400, {},"User already exists"));
         }
 
-        const result = await uploadOnCloudinary(filepath)
+        // Upload profile picture to Cloudinary
+        const result = await uploadOnCloudinary(filepath);
 
-        const newExpert = new Expert({
+        // Create new user with the user registration logic
+        const newUser = new User({
             name,
             email,
             password,
             profilePicture: result.secure_url
         });
 
-        await newExpert.save({ validationBeforeSave: false });
+        await newUser.save();
 
+        // // Check if the expert already exists in the Expert model
+        // const existingUser = await Expert.findOne({ email });
+        // if (existingExpert) {
+        //     throw new ApiError(400, "Expert already exists");
+        // }
+
+        // Create new expert entry with extra expert-specific properties
+        const newExpert = new Expert({
+            user: newUser._id,    // Reference to the new user created
+                     // Array of expert tags
+        });
+
+        await newExpert.save();
+
+        // Generate JWT token for the new expert
         const token = jwt.sign({ id: newExpert._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
+        // Set the token as a cookie
         res.cookie("token", token, { httpOnly: true });
+
+        // Respond with success and the new expert data
         return res.status(201).json(new ApiResponse(201, newExpert, "Expert registered successfully"));
 
     } catch (err) {
@@ -106,14 +136,16 @@ export const sendOtp = async (req, res) => {
     }
 
     try {
-        const existingExpert = await Expert.findOne({ phoneNumber });
-        if (existingExpert) {
+        const existingUser = await User.findOne({ phoneNumber });
+        if (existingUser) {
             throw new ApiError(400, "Expert with this phone number already exists");
         }
 
         const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
         const cDate = new Date();
-
+        existingExpert
+        existingExpert
+        existingExpert
         await Otp.findOneAndUpdate(
             { phoneNumber },
             {
@@ -182,17 +214,20 @@ export const login = async (req, res) => {
             throw new ApiError(400, "Email and password are required");
         }
 
-        const Expert = await Expert.findOne({ email });
-        if (!Expert) {
-            throw new ApiError(400, "Expert not found");
+        const isUser = await User.findOne({ email });
+        if (!isUser) {
+            res.status(400).json(new ApiResponse(404, {},"User not  found"));
         }
-
-        const isMatch = await bcrypt.compare(password, Expert.password);
+        const isExpert= await Expert.findOne({user: isUser._id})
+        if (!isExpert) {
+            res.status(400).json(new ApiResponse(404, {},"Expert not  found"));
+        }
+        const isMatch =  bcrypt.compare(password, isUser.password);
         if (!isMatch) {
             throw new ApiError(400, "Invalid credentials");
         }
 
-        const token = jwt.sign({ id: Expert._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
+        const token = jwt.sign({ id: isUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie('token', token, {
             httpOnly: true,
@@ -201,7 +236,7 @@ export const login = async (req, res) => {
             maxAge: 12 * 60 * 60 * 1000
         });
 
-        return res.status(200).json(new ApiResponse(200, { name: Expert.name, email: Expert.email }, "Logged in successfully"));
+        return res.status(200).json(new ApiResponse(200, { name: isUser.name, email: isUser.email }, "Logged in successfully"));
 
     } catch (error) {
         console.error("Login error:", error);
@@ -216,18 +251,20 @@ export const logout = (req, res) => {
 
 export const forgetPassword = async (req, res) => {
     try {
-        const email = req.body.email;
-        const ExpertData = await Expert.findOne({ email: email });
-
-        if (ExpertData) {
-            const randomString = randomstring.generate();
-            await Expert.updateOne({ email: email }, { $set: { token: randomString } });
-            await sendResetEmail(ExpertData.name, ExpertData.email, randomString);
-
-            return res.status(200).json(new ApiResponse(200, null, "Please check your email to reset your password"));
+        const {email} = req.body;
+        const isUser= await User.findOne({email})
+        if (!isUser) {
+            res.status(400).json(new ApiResponse(404, {},"User not  found"));
         }
+        const isExpert= await Expert.findOne({user: isUser._id})
+        if (!isExpert) {
+            res.status(400).json(new ApiResponse(404, {},"Expert not  found"));
+        }
+            const randomString = randomstring.generate();
+            await User.updateOne({ email: email }, { $set: { token: randomString } });
+            await sendResetEmail(isUser.name, isUser.email, randomString);
+            return res.status(200).json(new ApiResponse(200, null, "Please check your email to reset your password"));
 
-        throw new ApiError(404, "This email does not exist");
     } catch (error) {
         console.error(error);
         throw new ApiError(500, "Internal server error", [error.message]);
@@ -238,27 +275,27 @@ export const verifyEmailOtp = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
 
-        const ExpertData = await Expert.findOne({ email });
+        const isUser = await User.findOne({ email });
 
-        if (!ExpertData) {
+        if (!isUser) {
             throw new ApiError(404, "Expert not found");
         }
 
-        if (ExpertData.otp !== otp) {
+        if (isUser.otp !== otp) {
             throw new ApiError(400, "Invalid OTP");
         }
 
         const currentTime = new Date();
-        if (currentTime > ExpertData.otpExpiration) {
-            throw new ApiError(400, "OTP has expired");
+        if (currentTime > isUser.otpExpiration) {
+            res.status(400).json( new ApiResponse( 400,{} ,"OTP has expired"));
         }
 
-        ExpertData.password = newPassword;
-        ExpertData.otp = '';
-        ExpertData.otpExpiration = null;
+        isUser.password = newPassword;
+        isUser.otp = '';
+        isUser.otpExpiration = null;
         console.log("New password:", newPassword);
-        await ExpertData.save();
-        console.log('Password updated successfully for Expert:', ExpertData.email);
+        await isUser.save();
+        console.log('Password updated successfully for Expert:', isUser.email);
 
         return res.status(200).json(new ApiResponse(200, null, "Password updated successfully"));
     } catch (error) {
