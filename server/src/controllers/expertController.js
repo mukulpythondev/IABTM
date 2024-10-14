@@ -27,9 +27,9 @@ export const postMasterclass = async (req, res) => {
         if (!req.file) {
             throw new ApiError(400, 'No video file uploaded.');
         }
-        console.log(req.file)
+        // console.log(req.file)
         const filePath = req.file.path;
-        console.log(filePath)
+        // console.log(filePath)
         const result = await uploadOnCloudinary(filePath);
 
         if (!result) {
