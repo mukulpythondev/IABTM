@@ -16,6 +16,7 @@ import sendResetEmail from '../helpers/sendEmail.js'
 import ApiError from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import uploadOnCloudinary from '../utils/cloudinary.js';
+import pendingUser from '../models/pendingUserModel.js';
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,7 +25,7 @@ const twilioClient = new twilio(accountSid, authToken)
 
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
-    const filepath= req?.file?.path
+    const filepath = req?.file?.path
     console.log(filepath)
 
     if (!name || !email || !password || !filepath) {
@@ -54,7 +55,7 @@ export const register = async (req, res) => {
             profilePicture: result.secure_url
         });
 
-        await newUser.save({validationBeforeSave:false});
+        await newUser.save({ validationBeforeSave: false });
 
         const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
@@ -64,6 +65,42 @@ export const register = async (req, res) => {
     } catch (err) {
         console.error(err);
         throw new ApiError(500, "Internal server error", [err.message]);
+    }
+};
+
+export const registerWithNo = async (req, res) => {
+    const { name, phoneNumber, password } = req.body;
+    const filepath = req?.file?.path;
+
+    if (!name || !phoneNumber || !password || !filepath) {
+        return res.status(400).json({ error: 'All fields are required: name, phone number, password, and profile picture.' });
+    }
+
+    try {
+        const existingUser = await User.findOne({ phoneNumber });
+        if (existingUser) {
+            return res.status(400).json({ error: 'User with this phone number already exists.' });
+        }
+
+        const otpResult = await sendOtp(req, res);
+
+        if (otpResult.success) {
+            const newPendingUser = new pendingUser({
+                name,
+                phoneNumber,
+                password,
+                filepath
+            })
+            await newPendingUser.save()
+
+            return res.status(200).json({
+                message: 'OTP sent successfully. Please verify your phone number to complete registration.'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error during registration:', error);
+        return res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
 
@@ -88,14 +125,10 @@ export const sendOtp = async (req, res) => {
             {
                 $set: {
                     otp,
-                    otpExpiration: new Date(cDate.getTime() + 5 * 60 * 1000) // Set expiration (e.g., 5 minutes)
+                    otpExpiration: new Date(cDate.getTime() + 5 * 60 * 1000) // 5 minutes expiration
                 }
             },
-            {
-                upsert: true,
-                new: true,
-                setDefaultsOnInsert: true
-            }
+            { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
         await twilioClient.messages.create({
@@ -104,7 +137,8 @@ export const sendOtp = async (req, res) => {
             to: phoneNumber
         });
 
-        return res.status(200).json(new ApiResponse(200, null, 'OTP sent successfully'));
+        // No response here, just return success or data
+        return { success: true };
 
     } catch (err) {
         console.error(err);
@@ -115,27 +149,51 @@ export const sendOtp = async (req, res) => {
 export const verifyOtp = async (req, res) => {
     try {
         const { phoneNumber, otp } = req.body;
+
         const otpData = await Otp.findOne({ phoneNumber, otp });
         if (!otpData) {
             throw new ApiError(404, "You entered wrong OTP");
         }
 
         const isOtpExpired = await otpVerification(otpData.otpExpiration);
-
         if (isOtpExpired) {
             return res.status(400).json(new ApiResponse(400, null, 'Your OTP has expired.'));
         }
 
-        const token = jwt.sign({ id: otpData._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
+        const pendingUserData = await pendingUser.findOne({ phoneNumber });
+        if (!pendingUserData) {
+            throw new ApiError(400, 'No pending user data found. Please restart the registration process.');
+        }
+
+        const { name, password, filepath } = pendingUserData;
+        
+        if (!name || !phoneNumber || !password || !filepath) {
+            throw new ApiError(400, 'Missing data required for registration after OTP verification.');
+        }
+
+        const result = await uploadOnCloudinary(filepath);
+
+        const newUser = new User({
+            name,
+            phoneNumber,
+            password,
+            profilePicture: result.secure_url
+        });
+
+        await newUser.save();
+
+        await pendingUser.findOneAndDelete({ phoneNumber });
+
+        const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
 
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 12 * 60 * 60 * 1000
+            maxAge: 12 * 60 * 60 * 1000 
         });
 
-        return res.status(200).json(new ApiResponse(200, null, 'OTP Verified successfully!'));
+        return res.status(200).json(new ApiResponse(200, null, 'User registered and OTP verified successfully!'));
 
     } catch (error) {
         console.error('Error verifying OTP:', error);
@@ -153,7 +211,7 @@ export const login = async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            res.status(400).json(new ApiResponse(400,{} , "User not found"));
+            res.status(400).json(new ApiResponse(400, {}, "User not found"));
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
