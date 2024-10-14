@@ -9,6 +9,7 @@ import shopRoutes from './src/routes/shopRoute.js'
 import orderRoutes from './src/routes/orderRoutes.js'
 import cartRoutes from './src/routes/cartRoutes.js'
 const jwt_secret = process.env.JWT_SECRET
+import articleRoutes from './src/routes/articleRoutes.js'
 const app= express()
 app.use(cors({
     origin: process.env.CORS_ORIGIN
@@ -29,4 +30,5 @@ app.use("/api/expert", expertroutes)
 app.use("/api/shop",shopRoutes)
 app.use("/api/order",orderRoutes)
 app.use("/api/cart",cartRoutes)
+app.use("/api/admin/articles", articleRoutes)
 export default app;
