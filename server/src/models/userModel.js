@@ -42,6 +42,7 @@ const userSchema = new mongoose.Schema({
     },
     twoFA: {
         type: Boolean,
+        default: true
         // required : true
     },
     password: {
