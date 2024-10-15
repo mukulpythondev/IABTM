@@ -20,13 +20,13 @@ const userSchema = new mongoose.Schema({
     },
     gender: {
         type: String,
-        enum: ['male', 'female', 'other'], 
+        enum: ['male', 'female', 'other'],
         // required: true
     },
     phone: {
-        type: Number,
+        type: String,
         // required: true,
-        maxlength: 10  
+        // maxlength: 10
     },
     email: {
         type: String,
@@ -39,6 +39,11 @@ const userSchema = new mongoose.Schema({
             },
             message: props => `${props.value} is not a valid email address!`,
         }
+    },
+    twoFA: {
+        type: Boolean,
+        default: true
+        // required : true
     },
     password: {
         type: String,

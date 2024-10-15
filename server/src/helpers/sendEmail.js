@@ -7,7 +7,7 @@ dotenv.config({
     path: './.env'
 });
 
-const sendResetEmail = async (name, email) => {
+const sendVerificationEmail = async (name, email) => {
     const emailUser = process.env.EMAIL_USER;
     const emailPassword = process.env.EMAIL_PASSWORD;
     const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
@@ -50,4 +50,4 @@ const sendResetEmail = async (name, email) => {
     }
 }
 
-export default sendResetEmail;
+export default sendVerificationEmail;
