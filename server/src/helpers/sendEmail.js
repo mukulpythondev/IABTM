@@ -13,7 +13,7 @@ const sendVerificationEmail = async (name, email) => {
     const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
 
     try {
-        const otpExpiration = new Date(Date.now() + 2 * 60 * 1000);  
+        const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);  
         await User.findOneAndUpdate(
             { email: email },
             { otp: otp, otpExpiration: otpExpiration }

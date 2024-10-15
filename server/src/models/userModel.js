@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
         enum: ['male', 'female', 'other'],
         // required: true
     },
-    phone: {
+    phoneNumber: {
         type: String,
         // required: true,
         // maxlength: 10
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     },
     twoFA: {
         type: Boolean,
-        default: true
+        default: false
         // required : true
     },
     password: {

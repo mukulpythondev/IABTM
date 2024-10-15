@@ -33,7 +33,7 @@ export const loginUserWithMail = async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            throw new ApiError(404, "User not found");
+            res.status(404).json(new ApiResponse(404, {}, "User not found."))
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -117,10 +117,15 @@ export const registerUserWithMail = async (req, res) => {
         if (existingUser) {
             throw new ApiError(400, "User already exists");
         }
-
+        const existingPendingUser= await PendingUser.findOne({email})
+      
         const otp = randomstring.generate({ length: 6, charset: 'numeric' });
         const otpExpiration = new Date(Date.now() + 10 * 60 * 1000);
-
+        if(existingPendingUser)
+            {
+                await sendVerificationEmail(name, email, otp);
+                return res.json(new ApiResponse(200, null, "OTP sent to your email. Please verify your email to complete registration."));
+            }
         const newPendingUser = new PendingUser({
             name,
             email,
