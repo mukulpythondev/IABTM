@@ -10,18 +10,16 @@ import Otp from '../models/otpModel.js';
 import bcrypt from 'bcryptjs'
 import randomstring from 'randomstring';
 import otpGenerator from 'otp-generator';
-import twilio from 'twilio';
+
 import sendVerificationEmail from '../helpers/sendEmail.js'
 import ApiError from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import PendingUser from '../models/pendingUserModel.js';
 import sendVerificationSms from '../helpers/sendSms.js';
-const accountSid = process.env.TWILIO_ACCOUNT_SID
-const authToken = process.env.TWILIO_AUTH_TOKEN
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const twilioClient = new twilio(accountSid, authToken)
 
 export const loginUserWithMail = async (req, res) => {
     const { email, password } = req.body;
@@ -449,7 +447,7 @@ export const updateUserProfile = async (req, res) => {
             throw new ApiError(404, "User not found");
         }
 
-        return res.status(200).json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+        return res.status(200).json(new ApiResponse(200, updatedUser, "User Profile updated successfully"));
     }
     catch (error) {
         console.error('Error updating profile:', error);

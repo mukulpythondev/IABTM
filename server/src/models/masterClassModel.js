@@ -16,6 +16,6 @@ const masterclassSchema = new mongoose.Schema({
     }
 })
 
-const masterclass = mongoose.model('expert', masterclassSchema);
+const Masterclass = mongoose.model('Masterclass', masterclassSchema);
 
-export default masterclass;
+export default Masterclass;

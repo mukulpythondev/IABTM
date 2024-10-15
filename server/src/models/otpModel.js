@@ -7,13 +7,7 @@ const otpSchema = new mongoose.Schema({
     phoneNumber: {
         type: String,
         unique: true,
-        sparse: true,
-        validate: {
-            validator: function (v) {
-                return v === null || /^\d{10}$/.test(v);
-            },
-            message: props => `${props.value} is not a valid phone number!`
-        }
+        sparse: true
     },
     otp : {
         type: Number

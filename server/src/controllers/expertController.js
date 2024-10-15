@@ -1,28 +1,22 @@
 import { ApiResponse } from '../utils/ApiResponse.js';
 import Expert from '../models/expertModel.js';
 import Otp from '../models/otpModel.js';
-import masterclass from '../models/masterClassModel.js';
+import Masterclass from '../models/masterClassModel.js';
 import ApiError from '../utils/ApiError.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import User from '../models/userModel.js';
 import PendingUser from '../models/pendingUserModel.js';
-import validator from 'validator';
+
 import jwt from "jsonwebtoken"
-import randomstring from 'randomstring';
-import bcrypt from 'bcryptjs'
-import otpGenerator from 'otp-generator';
-import twilio from 'twilio';
-import sendVerificationEmail from '../helpers/sendEmail.js';
-// import otpVerification from '../helpers/otpValidate.js';
-const accountSid = process.env.TWILIO_ACCOUNT_SID
-const authToken = process.env.TWILIO_AUTH_TOKEN
+
+
 const JWT_SECRET = process.env.JWT_SECRET;
-const twilioClient = new twilio(accountSid, authToken)
+
 
 export const postMasterclass = async (req, res) => {
     try {
         const { title, tags } = req.body;
-        // const expertId = req.user.id; 
+        const expertId = req.user.id;
 
         if (!title || !tags) {
             throw new ApiError(400, 'Title and content are required.');
@@ -31,16 +25,16 @@ export const postMasterclass = async (req, res) => {
         if (!req.file) {
             throw new ApiError(400, 'No video file uploaded.');
         }
-        // console.log(req.file)
+
         const filePath = req.file.path;
-        // console.log(filePath)
+
         const result = await uploadOnCloudinary(filePath);
 
         if (!result) {
             throw new ApiError(500, 'Failed to upload video to Cloudinary.');
         }
 
-        const newMasterclass = new masterclass({
+        const newMasterclass = new Masterclass({
             title,
             tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
             video: result.secure_url
@@ -48,11 +42,11 @@ export const postMasterclass = async (req, res) => {
 
         const savedMasterclass = await newMasterclass.save();
 
-        // await Expert.findByIdAndUpdate(
-        //     expertId,
-        //     { $push: { masterClasses: savedMasterclass._id } },
-        //     { new: true, runValidators: true }
-        // );
+        await Expert.findOneAndUpdate(
+            { user: expertId },
+            { $push: { masterclasses: savedMasterclass._id } },
+            { new: true, runValidators: true }
+        );
 
         res.status(201).json(
             new ApiResponse(201, 'Masterclass created successfully', {
@@ -78,14 +72,15 @@ export const verifyExpertEmail = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (user) {
+            const pendingOtp = await Otp.findOne({ email });
+
             const currentTime = new Date();
-            if (otp !== user.otp || currentTime > user.otpExpiration) {
+            const otpExpirationDate = new Date(pendingOtp.otpExpiration);
+            if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
                 throw new ApiError(400, "Invalid or expired OTP");
             }
 
-            user.otp = null;
-            user.otpExpiration = null;
-            await user.save();
+            await Otp.findOneAndDelete({ email })
 
             const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
             res.cookie("token", token, { httpOnly: true });
@@ -99,12 +94,14 @@ export const verifyExpertEmail = async (req, res) => {
             }
 
             const currentTime = new Date();
-            if (otp !== pendingUser.otp || currentTime > pendingUser.otpExpiration) {
+            const otpExpirationDate = new Date(pendingUser.otpExpiration);
+
+            if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
                 throw new ApiError(400, "Invalid or expired OTP");
             }
 
             const result = await uploadOnCloudinary(pendingUser.filepath);
-
+            console.log(result)
             const newUser = new User({
                 name: pendingUser.name,
                 email: pendingUser.email,
@@ -126,7 +123,7 @@ export const verifyExpertEmail = async (req, res) => {
             const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
             res.cookie("token", token, { httpOnly: true });
 
-            return res.json(new ApiResponse(201, newUser, "User registered and logged in successfully"));
+            return res.json(new ApiResponse(201, newUser, "Expert registered and logged in successfully"));
         }
 
     } catch (error) {
@@ -136,80 +133,69 @@ export const verifyExpertEmail = async (req, res) => {
 };
 
 export const verifyExpertNumber = async (req, res) => {
+    const { phoneNumber, otp } = req.body;
+
+    if (!phoneNumber || !otp) {
+        throw new ApiError(400, "PhoneNumber and OTP are required");
+    }
+
     try {
-        const { phoneNumber, otp } = req.body;
-
-        if (!phoneNumber || !otp) {
-            throw new ApiError(400, "Phone number and OTP are required");
-        }
-
-        const otpData = await Otp.findOne({ phoneNumber, otp });
-        if (!otpData) {
-            throw new ApiError(404, "You entered wrong OTP");
-        }
-
-        const isOtpExpired = await otpVerification(otpData.otpExpiration);
-        if (isOtpExpired) {
-            throw new ApiError(400, "Your OTP has expired");
-        }
-
         const user = await User.findOne({ phoneNumber });
+
         if (user) {
-            user.otp = null;
-            user.otpExpiration = null;
-            await user.save();
+            const pendingOtp = await Otp.findOne({ phoneNumber });
+
+            const currentTime = new Date();
+            const otpExpirationDate = new Date(pendingOtp.otpExpiration);
+            if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
+                throw new ApiError(400, "Invalid or expired OTP");
+            }
+
+            await Otp.findOneAndDelete({ phoneNumber })
 
             const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 12 * 60 * 60 * 1000
+            res.cookie("token", token, { httpOnly: true });
+
+            return res.json(new ApiResponse(200, user, "Login successful"));
+        } else {
+            const pendingUser = await PendingUser.findOne({ phoneNumber });
+
+            if (!pendingUser) {
+                throw new ApiError(404, "Pending registration not found");
+            }
+
+            const currentTime = new Date();
+            const otpExpirationDate = new Date(pendingUser.otpExpiration);
+
+            if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
+                throw new ApiError(400, "Invalid or expired OTP");
+            }
+
+            const result = await uploadOnCloudinary(pendingUser.filepath);
+
+            const newUser = new User({
+                name: pendingUser.name,
+                phoneNumber: pendingUser.phoneNumber,
+                password: pendingUser.password,
+                profilePicture: result.secure_url,
+                twoFA: true
             });
 
-            return res.json(new ApiResponse(200, user, 'Login successful'));
+            await newUser.save();
+
+            const newExpert = new Expert({
+                user: newUser._id
+            });
+
+            await newExpert.save();
+
+            await PendingUser.deleteOne({ phoneNumber });
+
+            const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
+            res.cookie("token", token, { httpOnly: true });
+
+            return res.json(new ApiResponse(201, newUser, "Expert registered and logged in successfully"));
         }
-
-        const pendingUserData = await PendingUser.findOne({ phoneNumber });
-        if (!pendingUserData) {
-            throw new ApiError(400, "No pending user data found. Please restart the registration process.");
-        }
-
-        const { name, password, filepath } = pendingUserData;
-
-        if (!name || !phoneNumber || !password || !filepath) {
-            throw new ApiError(400, "Missing data required for registration after OTP verification");
-        }
-
-        const result = await uploadOnCloudinary(filepath);
-
-        const newUser = new User({
-            name,
-            phoneNumber,
-            password,
-            profilePicture: result.secure_url,
-            twoFA: true
-        });
-
-        await newUser.save();
-
-        const newExpert = new Expert({
-            user: newUser._id
-        });
-
-        await newExpert.save();
-
-        await PendingUser.findOneAndDelete({ phoneNumber });
-
-        const token = jwt.sign({ id: newUser._id.toString() }, JWT_SECRET, { expiresIn: "12h" });
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 12 * 60 * 60 * 1000
-        });
-
-        return res.json(new ApiResponse(200, newUser, "User registered and OTP verified successfully"));
 
     } catch (error) {
         console.error('Error verifying OTP:', error);
@@ -220,10 +206,8 @@ export const verifyExpertNumber = async (req, res) => {
 export const updateExpertProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-
         const updates = {};
-
-        const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone', 'expertTag'];
+        const allowedUpdates = ['name', 'profileName', 'age', 'gender', 'email', 'phone'];
 
         allowedUpdates.forEach(field => {
             if (req.body[field] !== undefined) {
@@ -240,11 +224,18 @@ export const updateExpertProfile = async (req, res) => {
             throw new ApiError(404, "User not found");
         }
 
-        return res.status(200).json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
-    }
-    catch (error) {
+        if (req.body.expertTag) {
+
+            await Expert.findOneAndUpdate(
+                { user: userId },
+                { expertTag: req.body.expertTag },
+                { new: true, runValidators: true }
+            );
+        }
+
+        return res.status(200).json(new ApiResponse(200, "Expert Profile updated successfully"));
+    } catch (error) {
         console.error('Error updating profile:', error);
         throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
-

@@ -6,27 +6,27 @@ import { upload } from '../middlewares/multerMiddleware.js';
 import { verifyExpertNumber , verifyExpertEmail , postMasterclass , updateExpertProfile} from '../controllers/expertController.js';
 
 import { registerUserWithNumber , forgetPassword , resetPassword , registerUserWithMail , logout , loginUserWithMail , loginUserWithNumber} from '../controllers/userController.js';
-
+  
 router.post("/post-masterclass" , authenticate ,upload.single('video') , postMasterclass)
 
-router.post("/register-expert-with-email", upload.single('file'), registerUserWithMail);
+router.post("/register-email", upload.single('file'), registerUserWithMail);
 
-router.post("/register-expert-with-number", upload.single('file'), registerUserWithNumber);
+router.post("/register-number", upload.single('file'), registerUserWithNumber);
 
-router.post("/verify-expert-number", verifyExpertNumber);
+router.post("/auth/verify/number", verifyExpertNumber);
 
-router.get("/logout", logout);
+router.get("/auth/logout", logout);
 
-router.post("/login-expert-with-email", loginUserWithMail);
+router.post("/auth/login-email", loginUserWithMail);
 
-router.post("/login-expert-with-number", loginUserWithNumber);
+router.post("/auth/login-number", loginUserWithNumber);
 
 router.post("/verify-expert-email", verifyExpertEmail)
 
-router.post("/forgot-expert-password", forgetPassword);
+router.post("/auth/forgot-password", forgetPassword);
 
-router.post("/reset-expert-password", resetPassword)
+router.post("/auth/reset-password", resetPassword)
 
-router.post("/update-expert-profile", authenticate, updateExpertProfile)
+router.post("/me/profile", authenticate, updateExpertProfile)
 
 export default router;
