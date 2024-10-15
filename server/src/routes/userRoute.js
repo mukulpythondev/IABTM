@@ -6,25 +6,26 @@ import { registerUserWithMail, registerUserWithNumber , verifyUserNumber, update
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/multerMiddleware.js'
 
-router.post("/register-user-with-email", upload.single('file'), registerUserWithMail);
+router.post("/register-email", upload.single('file'), registerUserWithMail);
 
-router.post("/register-user-with-number", upload.single('file'), registerUserWithNumber);
+router.post("/register-number", upload.single('file'), registerUserWithNumber);
 
-router.post("/verify-user-number", verifyUserNumber);
+router.post("/auth/verify/number", verifyUserNumber);
 
-router.get("/logout", logout);
+router.post("/auth/verify/email", verifyUserEmail)
 
-router.post("/login-user-with-email", loginUserWithMail);
+router.get("/auth/logout", logout);
 
-router.post("/login-user-with-number", loginUserWithNumber);
+router.post("/auth/login-email", loginUserWithMail);
 
-router.post("/verify-user-email", verifyUserEmail)
+router.post("/auth/login-number", loginUserWithNumber);
 
-router.post("/forgot-user-password", forgetPassword);
+router.post("/auth/forgot-password", forgetPassword);
 
-router.post("/reset-user-password", resetPassword)
+router.post("/auth/reset-password", resetPassword)
 
-router.post("/update-user-profile", authenticate, updateUserProfile)
+router.post("/me/profile", authenticate, updateUserProfile)
+
 
 
 export default router;
