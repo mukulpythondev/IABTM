@@ -3,27 +3,30 @@ const router = express.Router();
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/multerMiddleware.js';
 
-import { sendOtp , verifyOtp , login , logout , forgetPassword , verifyEmailOtp , updateProfile , postMasterclass, registerExpert, registerWithNo} from '../controllers/expertController.js';
+import { verifyExpertNumber , verifyExpertEmail , postMasterclass , updateExpertProfile} from '../controllers/expertController.js';
 
-router.post("/register-with-email", upload.single('file'), registerExpert);
-
-router.post("/register-with-number", upload.single('file'), registerWithNo);
-
-router.post("/send-sms-otp", sendOtp);
-
-router.post("/verify-sms-otp" , verifyOtp);
-
-router.get("/logout", logout);
-
-router.post("/login-with-email" , login);
-
-router.post("/forgot-password",forgetPassword)
-
-router.post("/verify-email-otp", verifyEmailOtp)
-
-router.post("/updateProfile" , authenticate , updateProfile);
+import { registerUserWithNumber , forgetPassword , resetPassword , registerUserWithMail , logout , loginUserWithMail , loginUserWithNumber} from '../controllers/userController.js';
 
 router.post("/post-masterclass" , authenticate ,upload.single('video') , postMasterclass)
 
+router.post("/register-expert-with-email", upload.single('file'), registerUserWithMail);
+
+router.post("/register-expert-with-number", upload.single('file'), registerUserWithNumber);
+
+router.post("/verify-expert-number", verifyExpertNumber);
+
+router.get("/logout", logout);
+
+router.post("/login-expert-with-email", loginUserWithMail);
+
+router.post("/login-expert-with-number", loginUserWithNumber);
+
+router.post("/verify-expert-email", verifyExpertEmail)
+
+router.post("/forgot-expert-password", forgetPassword);
+
+router.post("/reset-expert-password", resetPassword)
+
+router.post("/update-user-profile", authenticate, updateExpertProfile)
 
 export default router;

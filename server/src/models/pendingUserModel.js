@@ -8,7 +8,11 @@ const pendingUserSchema = new mongoose.Schema({
     },
     phoneNumber: {
         type: String,
-        required: true
+        // required: true
+    },
+    email : {
+        type : String,
+        
     },
     password: {
         type: String,
@@ -18,10 +22,17 @@ const pendingUserSchema = new mongoose.Schema({
     filepath : {
         type: String,
         required: true,
+    },
+    otp : {
+        type : Number
+    },
+    otpExpiration : {
+        type : Date
     }
+
 }, { timestamps: true });
 
 
-const pendingUser = mongoose.model('pendingUser', pendingUserSchema);
+const PendingUser = mongoose.model('PendingUser', pendingUserSchema);
 
-export default pendingUser;
+export default PendingUser;
