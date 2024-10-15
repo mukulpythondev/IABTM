@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs'
 import otpGenerator from 'otp-generator';
 import twilio from 'twilio';
 import sendVerificationEmail from '../helpers/sendEmail.js';
-import otpVerification from '../helpers/otpValidate.js';
+// import otpVerification from '../helpers/otpValidate.js';
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const JWT_SECRET = process.env.JWT_SECRET;

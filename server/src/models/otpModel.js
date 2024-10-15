@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 
 const otpSchema = new mongoose.Schema({
+    email : {
+        type : String,
+    },
     phoneNumber: {
         type: String,
         unique: true,
@@ -13,14 +16,10 @@ const otpSchema = new mongoose.Schema({
         }
     },
     otp : {
-        type: String,
-        require : true
+        type: Number
     }
     , otpExpiration : {
-        type : Date,
-        default: () => new Date(Date.now() + 2 * 60 * 1000),
-        get : (otpExpiration) => otpExpiration.getTime(),
-        set : (otpExpiration)=> new Date(otpExpiration)
+        type : Date
     }
 }, { timestamps: true });
 

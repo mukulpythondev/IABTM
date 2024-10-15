@@ -5,7 +5,7 @@ import { registerUserWithMail, registerUserWithNumber , verifyUserNumber, update
 
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/multerMiddleware.js'
-
+ 
 router.post("/register-email", upload.single('file'), registerUserWithMail);
 
 router.post("/register-number", upload.single('file'), registerUserWithNumber);

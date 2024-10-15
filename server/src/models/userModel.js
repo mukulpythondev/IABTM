@@ -66,14 +66,6 @@ const userSchema = new mongoose.Schema({
             }
         }],
         default: [{}],  // Ensure default structure for both `currentSelf` and `imagineSelf`
-    },
-    otp: {
-        type: String,
-        require: true
-    },
-    otpExpiration: {
-        type: Date,
-        default: () => new Date(Date.now() + 5 * 60 * 1000),
     }
 }, { timestamps: true });
 

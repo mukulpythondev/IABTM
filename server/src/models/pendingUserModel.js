@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const pendingUserSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        // required: true,
         trim: true,
     },
     phoneNumber: {
@@ -17,11 +17,11 @@ const pendingUserSchema = new mongoose.Schema({
     password: {
         type: String,
         minlength: 6,
-        required: true,
+        // required: true,
     },
     filepath : {
         type: String,
-        required: true,
+        // required: true,
     },
     otp : {
         type : Number
