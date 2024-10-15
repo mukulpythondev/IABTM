@@ -24,7 +24,7 @@ router.post("/forgot-user-password", forgetPassword);
 
 router.post("/reset-user-password", resetPassword)
 
-router.post("/update-expert-profile", authenticate, updateUserProfile)
+router.post("/update-user-profile", authenticate, updateUserProfile)
 
 
 export default router;
