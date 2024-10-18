@@ -10,6 +10,7 @@ import orderRoutes from './src/routes/orderRoutes.js'
 import cartRoutes from './src/routes/cartRoutes.js'
 const jwt_secret = process.env.JWT_SECRET
 import articleRoutes from './src/routes/articleRoutes.js'
+import friendRoutes from './src/routes/friendRoutes.js'
 const app= express()
 app.use(cors({
     origin: process.env.CORS_ORIGIN
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ limit: "16kb", extended: true }))
 app.use(express.static("public"))
 app.use(cookieParser())
 app.use("/api/user", authRoutes);
+app.use("/api/friend/", friendRoutes)
 app.use("/api/attribute", attributeRoutes);
 app.use("/api/expert", expertroutes)
 app.use("/api/shop",shopRoutes)
