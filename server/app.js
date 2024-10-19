@@ -2,33 +2,36 @@ import express from "express";
 import cors from "cors";
 import session from 'express-session';
 import cookieParser from "cookie-parser";
-import http from 'http'; // Import http to create server
+import http from 'http'; 
 import authRoutes from "./src/routes/userRoute.js";
-import attributeRoutes from './src/routes/attributeRoute.js'; 
+import attributeRoutes from './src/routes/attributeRoute.js';
 import expertroutes from './src/routes/expertRoute.js';
 import shopRoutes from './src/routes/shopRoute.js';
 import orderRoutes from './src/routes/orderRoutes.js';
 import cartRoutes from './src/routes/cartRoutes.js';
 import notificationRoutes from './src/routes/notificationRoute.js';
 import articleRoutes from './src/routes/articleRoutes.js';
-import initializeSocket from './src/helpers/socketConnection.js'; // Import socket initialization
-
-const jwt_secret = process.env.JWT_SECRET;
+import initializeSocket from './src/helpers/socketConnection.js'; 
+import { Server } from 'socket.io';
 
 const app = express();
-
-// Create HTTP server
 const server = http.createServer(app);
 
-// Initialize socket with server
-initializeSocket(server); // Pass server to socket connection
+const io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+initializeSocket(io);
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN
+    origin: process.env.CORS_ORIGIN || "*"
 }));
 
 app.use(session({
-    secret: jwt_secret, 
+    secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: { secure: process.env.NODE_ENV === 'production' }
@@ -48,4 +51,8 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/admin/articles", articleRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-export { app, server };
+app.get('/', (req, res) => {
+    res.send("Server is up and running");
+});
+
+export {server , io} 

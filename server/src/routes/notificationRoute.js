@@ -5,7 +5,7 @@ import {sendFriendReq , acceptFriendReq , declineFriendReq , newPost , likePost 
 
 import { authenticate } from '../middlewares/authMiddleware.js';
 
-router.post('/friend-requests', authenticate , sendFriendReq );
+router.post('/send-friend-req', authenticate , sendFriendReq );
 
 router.put('/friend-requests/:id/accept',acceptFriendReq );
 
@@ -17,6 +17,6 @@ router.post('/posts/:id/like', likePost);
 
 router.post('/posts/:id/comment', commentPost);
 
-router.post('/agency-updates', agencyUpdate);
+router.post('/agency-updates', authenticate, agencyUpdate);
 
 export default router

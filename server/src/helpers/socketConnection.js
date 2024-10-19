@@ -1,23 +1,18 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
-import { Server } from 'socket.io';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const initializeSocket = (server) => {
-  const io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
-  });
-
+const initializeSocket = (io) => {
+ 
   io.on('connection', (socket) => {
     console.log('New client connected');
 
     socket.on('authenticate', async () => {
+      console.log('Authenticate event received');
       try {
         const cookies = socket.handshake.headers.cookie;
+        console.log('cookies - ', cookies)
         if (!cookies) {
           console.error('No cookies found');
           socket.emit('auth_error', { message: 'No cookies found' });
@@ -37,7 +32,7 @@ const initializeSocket = (server) => {
 
         socket.user = decoded;
 
-        const user = await User.findById(decoded.userId);
+        const user = await User.findById(decoded.id);
         if (user) {
           socket.join(user._id.toString());
           console.log(`User ${user._id} authenticated and joined their room`);

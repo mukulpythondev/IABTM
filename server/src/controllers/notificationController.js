@@ -1,11 +1,12 @@
 import Notification from '../models/notificationModel.js';
 import User from '../models/userModel.js';
-import io from '../helpers/socketConnection.js';
+import { io } from '../../app.js'
 import ApiError from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
 // Create notification
 async function createNotification(recipientId, type, content, relatedPost = null, senderId = null) {
+
     const notification = new Notification({
         recipient: recipientId,
         type,
@@ -15,7 +16,12 @@ async function createNotification(recipientId, type, content, relatedPost = null
     });
     await notification.save();
 
-    io.to(recipientId.toString()).emit('new_notification', notification);
+    if (type == "AGENCY_UPDATE") {
+        io.emit('new_notification', notification.content)
+    }
+    else {
+        io.to(recipientId.toString()).emit('new_notification', notification.content);
+    }
 
     return notification;
 }
@@ -164,17 +170,14 @@ export const commentPost = async (req, res) => {
 export const agencyUpdate = async (req, res) => {
     try {
         const { content } = req.body;
-        const allUsers = await User.find();
 
-        await Promise.all(
-            allUsers.map(user => createNotification(
-                user._id,
-                'AGENCY_UPDATE',
-                content,
-                null,
-                req.user._id // Assuming the sender is an admin user
-            ))
-        );
+        await createNotification(
+            null,
+            'AGENCY_UPDATE',
+            content,
+            null,
+            req.user._id
+        )
 
         return res.status(200).json(new ApiResponse(200, null, "Agency update sent to all users"));
     } catch (error) {
