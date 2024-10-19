@@ -11,6 +11,7 @@ import orderRoutes from './src/routes/orderRoutes.js';
 import cartRoutes from './src/routes/cartRoutes.js';
 import notificationRoutes from './src/routes/notificationRoute.js';
 import articleRoutes from './src/routes/articleRoutes.js';
+import friendRoutes from './src/routes/friendRoutes.js'
 import initializeSocket from './src/helpers/socketConnection.js'; 
 import { Server } from 'socket.io';
 
@@ -25,6 +26,7 @@ const io = new Server(server, {
   });
 
 initializeSocket(io);
+
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN || "*"
@@ -43,6 +45,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 app.use("/api/user", authRoutes);
+app.use("/api/friend/", friendRoutes)
 app.use("/api/attribute", attributeRoutes);
 app.use("/api/expert", expertroutes);
 app.use("/api/shop", shopRoutes);
