@@ -3,28 +3,7 @@ import User from '../models/userModel.js';
 import { io } from '../../app.js'
 import ApiError from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-
-// Create notification
-async function createNotification(recipientId, type, content, relatedPost = null, senderId = null) {
-
-    const notification = new Notification({
-        recipient: recipientId,
-        type,
-        content,
-        relatedPost,
-        sender: senderId
-    });
-    await notification.save();
-
-    if (type == "AGENCY_UPDATE") {
-        io.emit('new_notification', notification.content)
-    }
-    else {
-        io.to(recipientId.toString()).emit('new_notification', notification.content);
-    }
-
-    return notification;
-}
+import createNotification from '../helpers/createNotification.js';
 
 // Send friend request
 export const sendFriendReq = async (req, res) => {

@@ -14,7 +14,7 @@ import articleRoutes from './src/routes/articleRoutes.js';
 import friendRoutes from './src/routes/friendRoutes.js'
 import initializeSocket from './src/helpers/socketConnection.js'; 
 import { Server } from 'socket.io';
-
+import commentRoutes from './src/routes/commentRoutes.js'
 const app = express();
 const server = http.createServer(app);
 
@@ -53,6 +53,7 @@ app.use("/api/order", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/admin/articles", articleRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/comment" , commentRoutes)
 
 app.get('/', (req, res) => {
     res.send("Server is up and running");
