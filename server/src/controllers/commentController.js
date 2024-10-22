@@ -1,36 +1,45 @@
-import Comment from '../models/commentModel.js'; 
+import Comment from '../models/commentModel.js';
 import mongoose from 'mongoose';
 import createNotification from '../helpers/createNotification.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
+import Masterclass from '../models/masterClassModel.js';
 
 // Create a new comment
 export const createComment = async (req, res) => {
-    const { content, post_type, postId, postUserId } = req.body;
+    const { content, post_type, postId } = req.body;
     const commentor = req.user.id;
- // can get the post id by finding them from db. but currently only masterclass is done 
+    var postUserId = "";
+    if (post_type == "masterclass") {
+        const response = await Masterclass.findById(postId);
+        console.log(response);
+        postUserId = response._id.toString();
+    }
+    // can get the post id by finding them from db. but currently only masterclass is done 
     try {
         const newComment = new Comment({
-            commentor: mongoose.Types.ObjectId(commentor),
+            commentor: commentor,
             content,
             post_type,
-            post: mongoose.Types.ObjectId(postId)
+            post: postId
         });
 
         await newComment.save();
 
-        const notification = await createNotification(
-            postUserId,
-            'POST_ENGAGEMENT',
-            `${req.user.name} commented on your post`,
-            null,
-            commentor
-        );
+        if(commentor != postUserId) {
+            const notification = await createNotification(
+                postUserId,
+                'POST_ENGAGEMENT',
+                `${req.user.name} commented on your post`,
+                null,
+                commentor
+            );
+            console.log(notification)
+        }
 
-        // further save the comment id in the that post_type db
-        // so that the partcular post will have all the comments
-        return res.json(new ApiResponse(200, notification, "Comment posted successfully!"));
+        return res.json(new ApiResponse(200, null, "Comment posted successfully!"));
     } catch (error) {
+        console.log(error)
         return res.json(new ApiError(400, 'Error creating comment', error));
     }
 };
@@ -76,7 +85,7 @@ export const updateComment = async (req, res) => {
 
 // Delete a comment by ID
 export const deleteComment = async (req, res) => {
-    const { commentId } = req.params;
+    const { commentId } = req.body;
     const loggedInUserId = req.user.id;
 
     try {
@@ -90,10 +99,11 @@ export const deleteComment = async (req, res) => {
             return res.json(new ApiError(403, 'Unauthorized: You can only delete your own comment'));
         }
 
-        await comment.remove();
+        await Comment.deleteOne({ _id: commentId });
 
         return res.json(new ApiResponse(200, null, "Comment deleted successfully!"));
     } catch (error) {
+        console.log(error)
         return res.json(new ApiError(400, 'Error deleting comment', error));
     }
 };

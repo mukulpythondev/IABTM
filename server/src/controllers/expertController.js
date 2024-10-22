@@ -6,7 +6,7 @@ import ApiError from '../utils/ApiError.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import User from '../models/userModel.js';
 import PendingUser from '../models/pendingUserModel.js';
-
+import moment from "moment";
 import jwt from "jsonwebtoken"
 
 
@@ -34,7 +34,10 @@ export const postMasterclass = async (req, res) => {
             throw new ApiError(500, 'Failed to upload video to Cloudinary.');
         }
 
+        const expert = await Expert.findOne({user : expertId})
+        console.log(expert)
         const newMasterclass = new Masterclass({
+            expert: expert._id,
             title,
             tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
             video: result.secure_url
@@ -239,3 +242,120 @@ export const updateExpertProfile = async (req, res) => {
         throw new ApiError(500, "Internal server error", [error.message]);
     }
 };
+
+export const trackMasterclassView = async (req, res) => {
+    try {
+        const { masterclassId } = req.body;
+        const userId = req.user.id;
+
+        const masterclass = await Masterclass.findById(masterclassId)
+            .populate({
+                path: 'expert',
+                populate: {
+                    path: 'user',
+                    model: 'User'
+                }
+            });
+
+        if (!masterclass) {
+            return res.status(404).json({
+                success: false,
+                message: 'Masterclass not found'
+            });
+        }
+
+        if (masterclass.expert.user._id.toString() === userId.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: 'Creator cannot be counted as a viewer'
+            });
+        }
+
+        const alreadyViewed = masterclass.viewedBy.includes(userId);
+
+        if (!alreadyViewed) {
+            masterclass.viewedBy.push(userId);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (!masterclass.views.length) {
+                masterclass.views = [
+                    { count: 1 },
+                    { dateViewed: today }
+                ];
+            } else {
+                masterclass.views = [
+                    { count: (masterclass.views[0]?.count || 0) + 1 },
+                    { dateViewed: today }
+                ];
+            }
+
+            console.log('Before save - views array:', masterclass.views);
+            
+            const updatedMasterclass = await masterclass.save();
+            
+            console.log('After save - views array:', updatedMasterclass.views);
+
+            return res.status(200).json({
+                success: true,
+                message: 'View tracked successfully',
+                data: {
+                    totalViews: updatedMasterclass.views[0].count,
+                    viewDate: updatedMasterclass.views[1].dateViewed
+                }
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Already viewed by this user',
+            data: {
+                totalViews: masterclass.views[0]?.count || 0
+            }
+        });
+
+    } catch (error) {
+        console.error('Error tracking masterclass view:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error tracking masterclass view',
+            error: error.message
+        });
+    }
+};
+
+export const getMasterclassViews = async (req, res) => {
+    try {
+        const { masterclassId } = req.body;
+
+        const masterclass = await Masterclass.findById(masterclassId)
+            .populate('viewedBy', 'name email');
+
+        if (!masterclass) {
+            return res.status(404).json({
+                success: false,
+                message: 'Masterclass not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                totalViews: masterclass.views[0]?.count || 0,
+                lastViewDate: masterclass.views[1]?.dateViewed,
+                uniqueViewers: masterclass.viewedBy.length,
+                viewers: masterclass.viewedBy
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching view statistics:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching view statistics',
+            error: error.message
+        });
+    }
+};
+

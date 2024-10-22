@@ -12,7 +12,7 @@ const commentSchema = new mongoose.Schema({
     },
     post_type: {
         type: String,
-        enum: ['photo', 'masterclass'],  
+        enum: ['article', 'masterclass'],  
         required: true
     },
     post: {
