@@ -9,11 +9,15 @@ export const sendFriendRequest = async (req, res) => {
     const { recipientId } = req.body;
     const requesterId = req.user.id;
 
-    if (!recipientId) throw new ApiError(400, "Recipient ID is required.");
+    if (!recipientId)  {
+        return res.status(200).json(new ApiResponse(400, 'Recipient ID is required.'));
+    }
 
     try {
         const recipient = await User.findById(recipientId);
-        if (!recipient) throw new ApiError(404, "Recipient user not found.");
+        if (!recipient) {
+            return res.status(200).json(new ApiResponse(404, 'Recipient user not found.'));
+        }
 
         const existingRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId });
         if (existingRequest) return res.json(new ApiResponse(400, null, "Friend request already exists."));
@@ -49,7 +53,9 @@ export const acceptFriendRequest = async (req, res) => {
         console.log(recipientId)
 
         const friendRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId, status: 'pending' });
-        if (!friendRequest) throw new ApiError(404, "Friend request not found.");
+        if (!friendRequest) {
+            return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
+        }
 
         friendRequest.status = 'accepted';
         await friendRequest.save();
@@ -74,7 +80,7 @@ export const rejectFriendRequest = async (req, res) => {
 
     try {
         const friendRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId, status: 'pending' });
-        if (!friendRequest) throw new ApiError(404, "Friend request not found.");
+        if (!friendRequest)  return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
 
         friendRequest.status = 'rejected';
         await friendRequest.save();
@@ -182,7 +188,7 @@ export const removeFriend = async (req, res) => {
             ]
         });
 
-        if (!result) throw new ApiError(404, "Friendship not found.");
+        if (!result)  return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
 
         return res.json(new ApiResponse(200, null, "Friend removed successfully."));
     } catch (error) {

@@ -67,11 +67,11 @@ export const updateComment = async (req, res) => {
         const comment = await Comment.findById(commentId);
 
         if (!comment) {
-            return res.json(new ApiError(404, 'Comment not found'));
+            return res.status(200).json(new ApiResponse(400,'Comment not found'));
         }
 
         if (comment.commentor.toString() !== loggedInUserId) {
-            return res.json(new ApiError(403, 'Unauthorized: You can only edit your own comment'));
+            return res.status(200).json(new ApiResponse(400,'Unauthorized: You can only edit your own comment'));
         }
 
         comment.content = content;
@@ -92,11 +92,11 @@ export const deleteComment = async (req, res) => {
         const comment = await Comment.findById(commentId);
 
         if (!comment) {
-            return res.json(new ApiError(404, 'Comment not found'));
+            return res.status(200).json(new ApiResponse(400,'Comment not found'));
         }
 
         if (comment.commentor.toString() !== loggedInUserId) {
-            return res.json(new ApiError(403, 'Unauthorized: You can only delete your own comment'));
+            return res.status(200).json(new ApiResponse(400,'Unauthorized: You can only edit your own comment'));
         }
 
         await Comment.deleteOne({ _id: commentId });

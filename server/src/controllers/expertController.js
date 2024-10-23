@@ -19,11 +19,11 @@ export const postMasterclass = async (req, res) => {
         const expertId = req.user.id;
 
         if (!title || !tags) {
-            throw new ApiError(400, 'Title and content are required.');
+            return res.status(200).json(new ApiResponse(400, 'Title and content are required.'));
         }
 
         if (!req.file) {
-            throw new ApiError(400, 'No video file uploaded.');
+            return res.status(200).json(new ApiResponse(400, 'No video file uploaded.'));
         }
 
         const filePath = req.file.path;
@@ -34,7 +34,7 @@ export const postMasterclass = async (req, res) => {
             throw new ApiError(500, 'Failed to upload video to Cloudinary.');
         }
 
-        const expert = await Expert.findOne({user : expertId})
+        const expert = await Expert.findOne({ user: expertId })
         console.log(expert)
         const newMasterclass = new Masterclass({
             expert: expert._id,
@@ -68,7 +68,7 @@ export const verifyExpertEmail = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-        throw new ApiError(400, "Email and OTP are required");
+        return res.status(200).json(new ApiResponse(400, "Email and OTP are required"));
     }
 
     try {
@@ -80,7 +80,7 @@ export const verifyExpertEmail = async (req, res) => {
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingOtp.otpExpiration);
             if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             await Otp.findOneAndDelete({ email })
@@ -93,14 +93,14 @@ export const verifyExpertEmail = async (req, res) => {
             const pendingUser = await PendingUser.findOne({ email });
 
             if (!pendingUser) {
-                throw new ApiError(404, "Pending registration not found");
+                return res.status(200).json(new ApiResponse(400, "Pending registration not found"));
             }
 
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingUser.otpExpiration);
 
             if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             const result = await uploadOnCloudinary(pendingUser.filepath);
@@ -139,7 +139,7 @@ export const verifyExpertNumber = async (req, res) => {
     const { phoneNumber, otp } = req.body;
 
     if (!phoneNumber || !otp) {
-        throw new ApiError(400, "PhoneNumber and OTP are required");
+        return res.status(200).json(new ApiResponse(400, "PhoneNumber and OTP are required"));
     }
 
     try {
@@ -151,7 +151,7 @@ export const verifyExpertNumber = async (req, res) => {
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingOtp.otpExpiration);
             if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             await Otp.findOneAndDelete({ phoneNumber })
@@ -164,14 +164,14 @@ export const verifyExpertNumber = async (req, res) => {
             const pendingUser = await PendingUser.findOne({ phoneNumber });
 
             if (!pendingUser) {
-                throw new ApiError(404, "Pending registration not found");
+                return res.status(200).json(new ApiResponse(400, "Pending registration not found"));
             }
 
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingUser.otpExpiration);
 
             if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             const result = await uploadOnCloudinary(pendingUser.filepath);
@@ -224,7 +224,7 @@ export const updateExpertProfile = async (req, res) => {
         });
 
         if (!updatedUser) {
-            throw new ApiError(404, "User not found");
+            return res.status(200).json(new ApiResponse(400, "User not found"));
         }
 
         if (req.body.expertTag) {
@@ -258,17 +258,11 @@ export const trackMasterclassView = async (req, res) => {
             });
 
         if (!masterclass) {
-            return res.status(404).json({
-                success: false,
-                message: 'Masterclass not found'
-            });
+            return res.status(200).json(new ApiResponse(400, 'Masterclass not found'));
         }
 
         if (masterclass.expert.user._id.toString() === userId.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: 'Creator cannot be counted as a viewer'
-            });
+            return res.status(200).json(new ApiResponse(400, 'Creator cannot be counted as a viewer'));
         }
 
         const alreadyViewed = masterclass.viewedBy.includes(userId);
@@ -292,36 +286,23 @@ export const trackMasterclassView = async (req, res) => {
             }
 
             console.log('Before save - views array:', masterclass.views);
-            
+
             const updatedMasterclass = await masterclass.save();
-            
+
             console.log('After save - views array:', updatedMasterclass.views);
 
-            return res.status(200).json({
-                success: true,
-                message: 'View tracked successfully',
-                data: {
-                    totalViews: updatedMasterclass.views[0].count,
-                    viewDate: updatedMasterclass.views[1].dateViewed
-                }
-            });
+            return res.status(200).json(new ApiResponse(200, {
+                totalViews: updatedMasterclass.views[0].count,
+                viewDate: updatedMasterclass.views[1].dateViewed
+            }, 'View tracked successfully'));
         }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Already viewed by this user',
-            data: {
-                totalViews: masterclass.views[0]?.count || 0
-            }
-        });
+        return res.status(200).json(new ApiResponse(200, {
+            totalViews: masterclass.views[0]?.count || 0
+        }, 'Already viewed by this user'));
 
     } catch (error) {
         console.error('Error tracking masterclass view:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error tracking masterclass view',
-            error: error.message
-        });
+        throw new ApiError(500, "Error tracking masterclass view", [error.message]);
     }
 };
 
@@ -333,29 +314,19 @@ export const getMasterclassViews = async (req, res) => {
             .populate('viewedBy', 'name email');
 
         if (!masterclass) {
-            return res.status(404).json({
-                success: false,
-                message: 'Masterclass not found'
-            });
+            return res.status(200).json(new ApiResponse(400, 'Masterclass not found'));
         }
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                totalViews: masterclass.views[0]?.count || 0,
-                lastViewDate: masterclass.views[1]?.dateViewed,
-                uniqueViewers: masterclass.viewedBy.length,
-                viewers: masterclass.viewedBy
-            }
-        });
+        return res.status(200).json(new ApiResponse(200, {
+            totalViews: masterclass.views[0]?.count || 0,
+            lastViewDate: masterclass.views[1]?.dateViewed,
+            uniqueViewers: masterclass.viewedBy.length,
+            viewers: masterclass.viewedBy
+        }, 'View tracked successfully'));
+   
 
     } catch (error) {
         console.error('Error fetching view statistics:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching view statistics',
-            error: error.message
-        });
+        throw new ApiError(500, "Error fetching view statistics", [error.message]);
     }
 };
 

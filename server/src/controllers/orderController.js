@@ -10,7 +10,7 @@ export const createOrder = async (req, res) => {
         const cart = await Cart.findOne({ user: userId }).populate('items.product');
 
         if (!cart || cart.items.length === 0) {
-            throw new ApiError(400, "Cart is empty");
+            return res.status(200).json(new ApiResponse(400, 'Cart is empty'));
         }
 
         const totalAmount = cart.items.reduce((total, item) => {

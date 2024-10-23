@@ -9,7 +9,7 @@ export const createProduct = async (req, res) => {
     const uploadedFiles = [];
 
     if (files.length === 0) {
-      return res.status(400).json(new ApiError(400, "At least one product image is required."));
+      return res.status(200).json(new ApiResponse(400, "At least one product image is required."));
     }
 
     // Upload each file to Cloudinary (or another service) and collect the URLs
@@ -39,7 +39,7 @@ export const createProduct = async (req, res) => {
         category,
       ].some((field) => field?.trim() === "")
     ) {
-      throw new ApiError(400, "All Field are Required!");
+      return res.status(200).json(new ApiResponse(400, "All Field are Required!"));
     }
 
     const product = new Product({
@@ -84,7 +84,7 @@ export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
-      return res.status(404).json(new ApiError(404, "Product not found"));
+      return res.status(200).json(new ApiResponse(404, "Product not found"));
     }
     return res
       .status(200)
@@ -102,7 +102,7 @@ export const updateProduct = async (req, res) => {
       new: true,
     });
     if (!product) {
-      return res.status(404).json(new ApiError(404, "Product not found"));
+      return res.status(200).json(new ApiResponse(404, "Product not found"));
     }
     return res
       .status(200)
@@ -118,7 +118,7 @@ export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
-      return res.status(404).json(new ApiError(404, "Product not found"));
+      return res.status(200).json(new ApiResponse(404, "Product not found"));
     }
     return res
       .status(200)
@@ -135,21 +135,21 @@ export const filterByCategory = async (req, res) => {
     const { category } = req.body;
 
     if (!category) {
-      return res.status(400).json({ error: "Please provide the category." });
+      return res.status(200).json(new ApiResponse(404, "Please provide the category."));
     }
 
     const products = await Product.find({ category: category });
 
     if (products.length === 0) {
-      return res.status(404).json({ message: "No products found in this category." });
+      return res.status(200).json(new ApiResponse(404, "No products found in this category."));
     }
 
-    return res.status(200).json({ products });
+    return res.status(200).json(new ApiResponse(200, "Products fetched succesfully" , { products }));
 
   } catch (error) {
-    console.error(error);
+    console.error(error)
     return res
-      .status(500)
-      .json({ error: "Error fetching products", details: error.message });
+    .status(500)
+    .json(new ApiError(500, "Error Fetching product", error.message));
   }
 };

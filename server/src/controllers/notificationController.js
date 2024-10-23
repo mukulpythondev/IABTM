@@ -28,7 +28,7 @@ export const acceptFriendReq = async (req, res) => {
     try {
         const notification = await Notification.findById(req.params.id);
         if (!notification || notification.type !== 'FRIEND_REQUEST') {
-            throw new ApiError(404, "Friend request not found");
+            return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
         }
 
         // Add friend logic
@@ -56,7 +56,7 @@ export const declineFriendReq = async (req, res) => {
     try {
         const notification = await Notification.findByIdAndDelete(req.params.id);
         if (!notification || notification.type !== 'FRIEND_REQUEST') {
-            throw new ApiError(404, "Friend request not found");
+            return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
         }
 
         // Notify the sender that their friend request was declined
@@ -114,32 +114,6 @@ export const likePost = async (req, res) => {
         );
 
         return res.status(200).json(new ApiResponse(200, post, "Post liked successfully"));
-    } catch (error) {
-        throw new ApiError(400, error.message);
-    }
-};
-
-// Comment on a post
-export const commentPost = async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        const newComment = {
-            author: req.user._id,
-            content: req.body.content
-        };
-        post.comments.push(newComment);
-        await post.save();
-
-        // Notify the post author about the comment
-        await createNotification(
-            post.author,
-            'POST_ENGAGEMENT',
-            `${req.user.name} commented on your post`,
-            post._id,
-            req.user._id
-        );
-
-        return res.status(201).json(new ApiResponse(201, newComment, "Comment added successfully"));
     } catch (error) {
         throw new ApiError(400, error.message);
     }
