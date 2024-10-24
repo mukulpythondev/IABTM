@@ -2,26 +2,41 @@ import Friend from '../models/friendModel.js';
 import User from '../models/userModel.js';
 import ApiError from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-
+import createNotification from '../helpers/createNotification.js';
+import mongoose from 'mongoose';
 // Send Friend Request
 export const sendFriendRequest = async (req, res) => {
     const { recipientId } = req.body;
-    const requesterId = req.user.id; 
+    const requesterId = req.user.id;
 
-    if (!recipientId) throw new ApiError(400, "Recipient ID is required.");
+    if (!recipientId)  {
+        return res.status(200).json(new ApiResponse(400, 'Recipient ID is required.'));
+    }
 
     try {
         const recipient = await User.findById(recipientId);
-        if (!recipient) throw new ApiError(404, "Recipient user not found.");
+        if (!recipient) {
+            return res.status(200).json(new ApiResponse(404, 'Recipient user not found.'));
+        }
 
         const existingRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId });
-        if (existingRequest)   return res.json(new ApiResponse(400, null, "Friend request already exists."));
+        if (existingRequest) return res.json(new ApiResponse(400, null, "Friend request already exists."));
 
 
         const newRequest = new Friend({ requester: requesterId, recipient: recipientId });
+
+
+        const notification = await createNotification(
+            recipientId,
+            'FRIEND_REQUEST',
+            `${req.user.name} sent you a friend request`,
+            null,
+            requesterId
+        );
+
         await newRequest.save();
 
-        return res.json(new ApiResponse(200, null, "Friend request sent successfully."));
+        return res.json(new ApiResponse(200, notification, "Friend request sent successfully."));
     } catch (error) {
         console.error('Error sending friend request:', error);
         throw new ApiError(500, "Internal server error.");
@@ -34,13 +49,24 @@ export const acceptFriendRequest = async (req, res) => {
     const recipientId = req.user.id;
 
     try {
+        console.log(requesterId)
+        console.log(recipientId)
+
         const friendRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId, status: 'pending' });
-        if (!friendRequest) throw new ApiError(404, "Friend request not found.");
+        if (!friendRequest) {
+            return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
+        }
 
         friendRequest.status = 'accepted';
         await friendRequest.save();
-
-        return res.json(new ApiResponse(200, null, "Friend request accepted."));
+        const notification = await createNotification(
+            recipientId,
+            'FRIEND_REQUEST',
+            `${req.user.name} accepted your friend request`,
+            null,
+            requesterId
+        );
+        return res.json(new ApiResponse(200, notification, "Friend request accepted."));
     } catch (error) {
         console.error('Error accepting friend request:', error);
         throw new ApiError(500, "Internal server error.");
@@ -54,12 +80,18 @@ export const rejectFriendRequest = async (req, res) => {
 
     try {
         const friendRequest = await Friend.findOne({ requester: requesterId, recipient: recipientId, status: 'pending' });
-        if (!friendRequest) throw new ApiError(404, "Friend request not found.");
+        if (!friendRequest)  return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
 
         friendRequest.status = 'rejected';
         await friendRequest.save();
-
-        return res.json(new ApiResponse(200, null, "Friend request rejected."));
+        const notification = await createNotification(
+            recipientId,
+            'FRIEND_REQUEST',
+            `${req.user.name} rejected your friend request`,
+            null,
+            requesterId
+        );
+        return res.json(new ApiResponse(200, notification, "Friend request accepted."));
     } catch (error) {
         console.error('Error rejecting friend request:', error);
         throw new ApiError(500, "Internal server error.");
@@ -145,8 +177,8 @@ export const getPendingSentRequests = async (req, res) => {
 };
 // Remove Friend
 export const removeFriend = async (req, res) => {
-    const { friendId } = req.body; 
-    const userId = req.user.id; 
+    const { friendId } = req.body;
+    const userId = req.user.id;
 
     try {
         const result = await Friend.findOneAndDelete({
@@ -156,7 +188,7 @@ export const removeFriend = async (req, res) => {
             ]
         });
 
-        if (!result) throw new ApiError(404, "Friendship not found.");
+        if (!result)  return res.status(200).json(new ApiResponse(404, 'Friend request not found.'));
 
         return res.json(new ApiResponse(200, null, "Friend removed successfully."));
     } catch (error) {

@@ -26,17 +26,17 @@ export const loginUserWithMail = async (req, res) => {
 
     try {
         if (!email || !password) {
-            throw new ApiError(400, "Email and password are required.");
+            return res.status(200).json(new ApiResponse(400, "Email and password are required"));
         }
 
         const user = await User.findOne({ email });
         if (!user) {
-            res.status(404).json(new ApiResponse(404, {}, "User not found."))
+            return res.status(200).json(new ApiResponse(404, "User not found"));
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new ApiError(400, "Invalid password");
+            return res.status(200).json(new ApiResponse(400, "Invalid password"));
         }
 
         if (user.twoFA) {
@@ -79,13 +79,13 @@ export const registerUserWithNumber = async (req, res) => {
     const filepath = req?.file?.path;
 
     if (!name || !phoneNumber || !password || !filepath) {
-        throw new ApiError(400, "All fields are required: name, phone number, password, and profile picture.");
+        return res.status(200).json(new ApiResponse(400, "All fields are required: name, phone number, password, and profile picture."));
     }
 
     try {
         const existingUser = await User.findOne({ phoneNumber });
         if (existingUser) {
-            throw new ApiError(400, "User already exists");
+            return res.status(200).json(new ApiResponse(400, "User already exists"));
         }
         const existingPendingUser = await PendingUser.findOne({ phoneNumber })
 
@@ -123,21 +123,21 @@ export const registerUserWithMail = async (req, res) => {
     const filepath = req?.file?.path;
 
     if (!name || !email || !password || !filepath) {
-        throw new ApiError(400, "All fields and a profile picture are required");
+        return res.status(200).json(new ApiResponse(400, "All fields and a profile picture are required"));
     }
 
     if (!validator.isEmail(email)) {
-        throw new ApiError(400, "Invalid email address");
+        return res.status(200).json(new ApiResponse(400, "Invalid email address"));
     }
 
     if (password.length < 6) {
-        throw new ApiError(400, "Password must be at least 6 characters long");
+        return res.status(200).json(new ApiResponse(400,"Password must be at least 6 characters long"));
     }
 
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            throw new ApiError(400, "User already exists");
+            return res.status(200).json(new ApiResponse(400,"User already exists"));
         }
         const existingPendingUser = await PendingUser.findOne({ email })
 
@@ -172,7 +172,7 @@ export const loginUserWithNumber = async (req, res) => {
 
     try {
         if (!phoneNumber || !password) {
-            throw new ApiError(400, "PhoneNumber and password are required.");
+            return res.status(200).json(new ApiResponse(400, "PhoneNumber and password are required."));
         }
 
         const user = await User.findOne({ phoneNumber });
@@ -182,7 +182,7 @@ export const loginUserWithNumber = async (req, res) => {
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new ApiError(400, "Invalid password");
+            return res.status(200).json(new ApiResponse(400, "Invalid password"));
         }
 
         if (user.twoFA) {
@@ -223,7 +223,7 @@ export const verifyUserNumber = async (req, res) => {
     const { phoneNumber, otp } = req.body;
 
     if (!phoneNumber || !otp) {
-        throw new ApiError(400, "PhoneNumber and OTP are required");
+        return res.status(200).json(new ApiResponse(400, "PhoneNumber and otp are required."));
     }
 
     try {
@@ -235,7 +235,7 @@ export const verifyUserNumber = async (req, res) => {
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingOtp.otpExpiration);
             if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             await Otp.findOneAndDelete({ phoneNumber })
@@ -248,14 +248,14 @@ export const verifyUserNumber = async (req, res) => {
             const pendingUser = await PendingUser.findOne({ phoneNumber });
 
             if (!pendingUser) {
-                throw new ApiError(404, "Pending registration not found");
+                return res.status(200).json(new ApiResponse(400, "Pending registration not found"));
             }
 
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingUser.otpExpiration);
 
             if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             const result = await uploadOnCloudinary(pendingUser.filepath);
@@ -288,7 +288,7 @@ export const verifyUserEmail = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-        throw new ApiError(400, "Email and OTP are required");
+        return res.status(200).json(new ApiResponse(400, "Email and OTP are required"));
     }
 
     try {
@@ -300,7 +300,7 @@ export const verifyUserEmail = async (req, res) => {
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingOtp.otpExpiration);
             if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             await Otp.findOneAndDelete({ email })
@@ -313,14 +313,14 @@ export const verifyUserEmail = async (req, res) => {
             const pendingUser = await PendingUser.findOne({ email });
 
             if (!pendingUser) {
-                throw new ApiError(404, "Pending registration not found");
+                return res.status(200).json(new ApiResponse(400, "Pending registration not found"));
             }
 
             const currentTime = new Date();
             const otpExpirationDate = new Date(pendingUser.otpExpiration);
 
             if (String(otp) !== String(pendingUser.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-                throw new ApiError(400, "Invalid or expired OTP");
+                return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
             }
 
             const result = await uploadOnCloudinary(pendingUser.filepath);
@@ -353,14 +353,14 @@ export const forgetPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-        throw new ApiError(400, "Email is required");
+        return res.status(200).json(new ApiResponse(400, "Email is required"));
     }
 
     try {
         const isUser = await User.findOne({ email });
 
         if (!isUser) {
-            throw new ApiError(400, "User with this email address not found");
+            return res.status(200).json(new ApiResponse(400, "User with this email address not found"));
         }
         const existingPendingUser = await PendingUser.findOne({ email })
 
@@ -400,7 +400,7 @@ export const resetPassword = async (req, res) => {
         const currentTime = new Date();
         const otpExpirationDate = new Date(pendingOtp.otpExpiration);
         if (String(otp) !== String(pendingOtp.otp) || currentTime.getTime() > otpExpirationDate.getTime()) {
-            throw new ApiError(400, "Invalid or expired OTP");
+            return res.status(200).json(new ApiResponse(400, "Invalid or expired OTP"));
         }
 
         user.password = newPassword
@@ -444,7 +444,7 @@ export const updateUserProfile = async (req, res) => {
         });
 
         if (!updatedUser) {
-            throw new ApiError(404, "User not found");
+            return res.status(200).json(new ApiResponse(400, "User not found"));
         }
 
         return res.status(200).json(new ApiResponse(200, updatedUser, "User Profile updated successfully"));

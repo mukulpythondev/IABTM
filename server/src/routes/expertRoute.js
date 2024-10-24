@@ -3,7 +3,7 @@ const router = express.Router();
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/multerMiddleware.js';
 
-import { verifyExpertNumber , verifyExpertEmail , postMasterclass , updateExpertProfile} from '../controllers/expertController.js';
+import { verifyExpertNumber , getMasterclassViews , verifyExpertEmail , postMasterclass , updateExpertProfile, trackMasterclassView} from '../controllers/expertController.js';
 
 import { registerUserWithNumber , forgetPassword , resetPassword , registerUserWithMail , logout , loginUserWithMail , loginUserWithNumber} from '../controllers/userController.js';
   
@@ -28,5 +28,9 @@ router.post("/auth/forgot-password", forgetPassword);
 router.post("/auth/reset-password", resetPassword)
 
 router.post("/me/profile", authenticate, updateExpertProfile)
+
+router.post("/masterclass/view",authenticate , trackMasterclassView)
+
+router.post("/masterclass/stats",authenticate , getMasterclassViews)
 
 export default router;

@@ -14,7 +14,7 @@ export const addCurrentSelf = async (req, res) => {
         );
 
         if (!updatedUser) {
-            throw new ApiError(404, "User not found");
+            return res.status(200).json(new ApiResponse(400, "User not found"));
         }
 
         return res.status(200).json(new ApiResponse(200, updatedUser, "Current self updated successfully"));
@@ -36,7 +36,7 @@ export const addImagineSelf = async (req, res) => {
         );
 
         if (!updatedUser) {
-            throw new ApiError(404, "User not found");
+            return res.status(200).json(new ApiResponse(400, "User not found"));
         }
 
         return res.status(200).json(new ApiResponse(200, updatedUser, "Imagine self updated successfully"));

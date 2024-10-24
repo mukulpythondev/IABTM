@@ -8,7 +8,7 @@ export const createArticle = async (req, res) => {
     const { title, content, publishStatus, category, tags } = req.body;
 
     if ([title, content, category].some((field) => field?.trim() === "")) {
-      throw new ApiError(400, "Title, content, and category are required.");
+      return res.status(200).json(new ApiResponse(400, "Title, content, and category are required."));
     }
 
     const article = new Article({
@@ -51,7 +51,7 @@ export const getArticleById = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) {
-      return res.status(404).json(new ApiError(404, "Article not found"));
+      return res.status(200).json(new ApiResponse(400, "Article not found" , null));
     }
     return res
       .status(200)
@@ -81,7 +81,7 @@ export const updateArticle = async (req, res) => {
     );
 
     if (!updatedArticle) {
-      return res.status(404).json(new ApiError(404, "Article not found"));
+      return res.status(200).json(new ApiResponse(400, "Article not found" , null));
     }
 
     return res
@@ -99,7 +99,7 @@ export const deleteArticle = async (req, res) => {
   try {
     const article = await Article.findByIdAndDelete(req.params.id);
     if (!article) {
-      return res.status(404).json(new ApiError(404, "Article not found"));
+      return res.status(200).json(new ApiResponse(400, "Article not found"));
     }
     return res
       .status(200)
